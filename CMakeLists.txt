@@ -4,8 +4,11 @@ project(physics-simulations LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 cmake_policy(SET CMP0072 NEW)
+
+include(FetchContent)
 
 # --------------------------------------------------------------------------- #
 # 1. Source files
@@ -17,22 +20,39 @@ file(GLOB_RECURSE SRC CONFIGURE_DEPENDS
 
 list(APPEND SRC ${CMAKE_SOURCE_DIR}/main.cpp)
 
-add_executable(${PROJECT_NAME} ${SRC})
+add_executable(${PROJECT_NAME} ${SRC}
+    include/engine/Ray.hpp
+    src/engine/TextureManager.cpp)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
 
 # --------------------------------------------------------------------------- #
-# 2. OpenGL
+# 2. GLM
+# --------------------------------------------------------------------------- #
+
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 1.0.1
+)
+
+FetchContent_MakeAvailable(glm)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
+
+# --------------------------------------------------------------------------- #
+# 3. OpenGL
 # --------------------------------------------------------------------------- #
 
 find_package(OpenGL REQUIRED)
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE GL_GLEXT_PROTOTYPES)
 target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL)
 
 # --------------------------------------------------------------------------- #
-# 3. GLFW
+# 4. GLFW
 # --------------------------------------------------------------------------- #
 
 if(UNIX AND NOT APPLE)
@@ -47,8 +67,6 @@ if(UNIX AND NOT APPLE)
         ${GLFW3_LIBRARIES}
     )
 else()
-    include(FetchContent)
-
     FetchContent_Declare(
         glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -61,7 +79,7 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-# 4. Dear ImGui
+# 5. Dear ImGui
 # --------------------------------------------------------------------------- #
 
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/external/imgui)
@@ -102,7 +120,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 # --------------------------------------------------------------------------- #
-# 5. Linux extra libs
+# 6. Linux extra libs
 # --------------------------------------------------------------------------- #
 
 if(UNIX AND NOT APPLE)
@@ -113,7 +131,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # --------------------------------------------------------------------------- #
-# 6. macOS frameworks
+# 7. macOS frameworks
 # --------------------------------------------------------------------------- #
 
 if(APPLE)

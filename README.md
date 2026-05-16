@@ -18,9 +18,8 @@ The main programming language, chosen for its performance and modern features, e
 
 Used for rendering the simulation in real time, handling window/context creation, and drawing particles and fields.
 
-<img src="https://opengl.org/img/opengl_logo.png" width="64" height="64" alt="OpenGL Logo"/>
-
-<img src="https://cdn-b.saashub.com/images/app/service_logos/38/b48cc85cebb2/large.png?1553244024" width="64" height="64" alt="GLFW Logo"/>
+<div style="display:flex;flex-direction:row;gap:1rem;"><img src="https://opengl.org/img/opengl_logo.png" width="128" height="72" alt="OpenGL Logo"/>
+<img src="https://cdn-b.saashub.com/images/app/service_logos/38/b48cc85cebb2/large.png?1553244024" width="64" height="72" alt="GLFW Logo"/></div>
 
 ---
 
@@ -37,6 +36,12 @@ Build system generator for cross-platform compilation and easy dependency manage
 Immediate Mode GUI library for C++ to provide interactive controls and visualization.
 
 ![ImGui](https://blog.conan.io/assets/post_images/2019-06-26/conan-imgui-triangle-rotate-color.gif)
+
+---
+
+### 5. GLM
+
+Header-only math library used for vectors and linear algebra. It is fetched via CMake during configuration.
 
 ---
 
@@ -65,6 +70,7 @@ Make sure you have the following installed on your system:
 - CMake 3.14+
 - OpenGL development libraries
 - GLFW 3.x
+- GLM (fetched automatically by CMake)
 
 On Ubuntu/Debian:
 
@@ -76,7 +82,7 @@ sudo apt install build-essential cmake libglfw3-dev libgl1-mesa-dev
 ### 3. Build the Project
 
 ```bash
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 make
@@ -86,6 +92,40 @@ make
 
 ```bash
 ./physics-simulation
+```
+
+## 📁 Project Structure
+
+```
+physics-simulation/
+├── CMakeLists.txt
+├── LICENSE
+├── README.md
+├── main.cpp
+│
+├── include/
+│   ├── physics/
+│   │   ├── Types.hpp
+│   ├── physics/
+│   │   ├── Particle.hpp
+│   │   ├── Field.hpp
+│   │   ├── Motion.hpp
+│   │   └── ForceFunctions.hpp
+│   ├── engine/
+│   │   └── Camera2D.hpp
+│   ├── app/
+│   │   ├── Application.hpp
+│   │   ├── Context.hpp
+│   │   └── Constants.hpp
+│   └── ui/
+│       ├── ImGuiLayer.hpp
+│       └── InputManager.hpp
+│
+└── src/
+    ├── physics/
+    ├── engine/
+    ├── app/
+    └── ui/
 ```
 
 ## 🤝 Feedback and Contributions
