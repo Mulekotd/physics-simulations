@@ -15,10 +15,12 @@ public:
 
     void cursorPos(double& x, double& y) const noexcept { x = m_mouseX; y = m_mouseY; }
     void consumeMouseDelta(double& dx, double& dy) noexcept;
+    double consumeScrollDelta() noexcept;
 
     // GLFW callbacks
     static void CursorCallback(GLFWwindow* window, double xpos, double ypos);
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
+    static void WindowPosCallback(GLFWwindow* window, int xpos, int ypos);
     static void MouseCallback(GLFWwindow* window, int button, int action, int mods);
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
@@ -37,5 +39,8 @@ private:
     double m_mouseX = 0.0, m_mouseY = 0.0;
     double m_prevX = 0.0, m_prevY = 0.0;
     double m_mouseDeltaX = 0.0, m_mouseDeltaY = 0.0;
+    double m_scrollDeltaY = 0.0;
+    int    m_windowX = 0, m_windowY = 0;
+    bool   m_hasWindowPosition = false;
     bool   m_panning = false;
 };

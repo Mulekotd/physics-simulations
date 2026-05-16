@@ -21,6 +21,8 @@ public:
     GLuint id() const noexcept { return m_program; }
 
     void setInt(const std::string& name, int value) const noexcept;
+    void setFloat(const std::string& name, float value) const noexcept;
+    void setVec3(const std::string& name, float x, float y, float z) const noexcept;
     void setVec4(const std::string& name, float x, float y, float z, float w) const noexcept;
 
 private:

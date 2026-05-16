@@ -31,7 +31,8 @@ namespace Simulation::Forces {
 
             float speed = glm::length(velocity);
 
-            if (speed > 0.0001f) {
+            if (speed > 0.0001f)
+            {
                 glm::vec3 direction = -glm::normalize(velocity);
                 glm::vec3 force = direction * mu * particle.getMass() * g;
 

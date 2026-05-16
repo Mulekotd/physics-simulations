@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include <GLFW/glfw3.h>
 #include <glm/vec2.hpp>
@@ -25,15 +26,37 @@ namespace Application {
 
     struct DragState {
         bool active = false;
-        glm::vec3 planePoint{ 0.f, 0.f, 0.f };
-        glm::vec3 planeNormal{ 0.f, 0.f, 1.f };
         glm::vec3 lastPosition{ 0.f, 0.f, 0.f };
+        glm::vec3 targetPosition{ 0.f, 0.f, 0.f };
+        float depth = 0.f;
         std::optional<std::size_t> index;
     };
 
     struct RuntimeState {
         int count = 250;
         bool isRunning = false;
+        bool paused = false;
+        bool antiAliasing = true;
+        Simulation::Mode simulationMode = Simulation::Mode::FreeFall;
+        Simulation::Mode pendingSimulationMode = Simulation::Mode::FreeFall;
+        Field::Properties pendingProperties{
+            Constants::Physics::GRAVITY,
+            Constants::Physics::DYNAMIC_FRICTION_COEFFICIENT,
+            Constants::Physics::RESTITUTION_COEFFICIENT
+        };
+    };
+
+    struct PointLight {
+        glm::vec3 position{ 0.f, 0.f, 0.f };
+        float radius = 12.f;
+        float range = 420.f;
+        float intensity = 0.45f;
+    };
+
+    struct LightDragState {
+        bool active = false;
+        float depth = 0.f;
+        std::optional<std::size_t> index;
     };
 
     inline RuntimeState context;
@@ -45,7 +68,7 @@ namespace Application {
 
     inline Field world = Field{ glm::vec2{ resolution } };
     inline Camera2D camera = Camera2D{ world };
-    inline Camera3D camera3D = Camera3D{ glm::vec3{ 0.f, 0.f, 600.f } };
+    inline Camera3D camera3D = Camera3D{ glm::vec3{ 0.f, 0.f, Constants::Camera::DEFAULT_3D_START_DISTANCE } };
     inline CameraMode cameraMode = CameraMode::TwoD;
 
     inline ShaderProgram particleShader;
@@ -58,6 +81,9 @@ namespace Application {
     inline std::optional<std::size_t> selectedParticle;
     inline bool showParticleWindow = false;
     inline DragState drag;
+    inline std::vector<PointLight> lights;
+    inline LightDragState lightDrag;
+    inline glm::vec3 windowShakeAcceleration{ 0.f, 0.f, 0.f };
 
     bool Init();
     void Update(float dt);
@@ -66,6 +92,10 @@ namespace Application {
     void Cleanup();
 
     glm::vec3 ProjectToNDC(const glm::vec3& position);
-    glm::vec3 ParticleRadiusAxis();
+    glm::vec2 ParticleRadiusNDC(const glm::vec3& position, float radius);
+    float DepthCue(const glm::vec3& position);
+    glm::vec3 ParticleLightDirection(const glm::vec3& position);
+    bool IsAntiAliasingEnabled();
     bool IsParticleVisible(const glm::vec3& position, float radius);
+    void AddWindowShake(glm::vec2 delta);
 }
