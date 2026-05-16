@@ -1,0 +1,16 @@
+# VS Code settings and extensions
+/.vscode/
+
+# JetBrains IDEs settings
+/.idea/
+
+# Build directory
+/cmake-build-*/
+/build/
+/out/
+
+# Compiled binaries
+/bin/
+
+# Cache directories
+/.cache/
