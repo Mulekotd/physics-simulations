@@ -25,15 +25,15 @@ public:
     TextureId createChecker(const std::string& name,
                             std::uint8_t r1, std::uint8_t g1, std::uint8_t b1, std::uint8_t a1,
                             std::uint8_t r2, std::uint8_t g2, std::uint8_t b2, std::uint8_t a2,
-                            int size);
+                            std::int32_t size);
 
     const std::vector<TextureEntry>& entries() const noexcept { return m_entries; }
-    TextureId getByIndex(int index) const noexcept;
+    TextureId getByIndex(std::int32_t index) const noexcept;
 
     void clear();
 
 private:
     std::vector<TextureEntry> m_entries;
 
-    TextureId createTexture(const std::string& name, int width, int height, const std::vector<std::uint8_t>& data);
+    TextureId createTexture(const std::string& name, std::int32_t width, std::int32_t height, const std::vector<std::uint8_t>& data);
 };

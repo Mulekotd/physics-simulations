@@ -21,7 +21,7 @@
 
 namespace Application {
     namespace {
-        constexpr int SHADOW_MAP_SIZE = 1024;
+        constexpr std::int32_t SHADOW_MAP_SIZE = 1024;
 
         std::string readTextFile(const std::string& path)
         {
@@ -32,6 +32,7 @@ namespace Application {
 
             std::ostringstream buffer;
             buffer << file.rdbuf();
+
             return buffer.str();
         }
 
@@ -98,19 +99,22 @@ namespace Application {
         {
             glm::vec3 center = world.getPosition();
             glm::vec2 halfSize = world.getHalfSize();
-            float halfDepth = std::max(world.getHalfDepth(), 1.0f);
-            float sceneRadius = glm::length(glm::vec3{ halfSize.x, halfSize.y, halfDepth });
+
+            float32_t halfDepth = std::max(world.getHalfDepth(), 1.0f);
+            float32_t sceneRadius = glm::length(glm::vec3{ halfSize.x, halfSize.y, halfDepth });
 
             glm::vec3 lightDir = center - light.position;
             if (glm::dot(lightDir, lightDir) <= Constants::Math::EPSILON)
                 lightDir = glm::vec3{ -0.35f, -0.75f, -0.55f };
+
             lightDir = glm::normalize(lightDir);
 
             glm::vec3 up{ 0.f, 1.f, 0.f };
             if (std::abs(glm::dot(up, lightDir)) > 0.92f)
                 up = glm::vec3{ 0.f, 0.f, 1.f };
 
-            float lightDistance = std::max(glm::length(light.position - center), sceneRadius);
+            float32_t lightDistance = std::max(glm::length(light.position - center), sceneRadius);
+
             glm::mat4 lightView = glm::lookAt(light.position, light.position + lightDir, up);
             glm::mat4 lightProjection = glm::ortho(-sceneRadius,
                                                    sceneRadius,
@@ -124,12 +128,13 @@ namespace Application {
         void drawParticleShadowDepth(const Particle& particle, const PointLight& light)
         {
             glm::vec3 lightDir = particle.getPosition() - light.position;
-            float distanceSq = glm::dot(lightDir, lightDir);
+            float32_t distanceSq = glm::dot(lightDir, lightDir);
 
             if (distanceSq <= Constants::Math::EPSILON || distanceSq > light.range * light.range)
                 return;
 
             lightDir = glm::normalize(lightDir);
+
             glm::vec3 up{ 0.f, 1.f, 0.f };
             if (std::abs(glm::dot(up, lightDir)) > 0.92f)
                 up = glm::vec3{ 0.f, 0.f, 1.f };
@@ -141,13 +146,15 @@ namespace Application {
             glBegin(GL_TRIANGLE_FAN);
             glVertex3f(nearestCenter.x, nearestCenter.y, nearestCenter.z);
 
-            constexpr int segments = 32;
-            for (int i = 0; i <= segments; ++i)
+            constexpr std::int32_t segments = 32;
+            for (std::int32_t i = 0; i <= segments; ++i)
             {
-                float angle = (2.0f * Constants::Math::PI * i) / static_cast<float>(segments);
+                float32_t angle = (2.0f * Constants::Math::PI * i) / static_cast<float32_t>(segments);
+
                 glm::vec3 point = nearestCenter +
                                   right * (std::cos(angle) * particle.getRadius()) +
                                   discUp * (std::sin(angle) * particle.getRadius());
+
                 glVertex3f(point.x, point.y, point.z);
             }
 
@@ -162,6 +169,7 @@ namespace Application {
                 return;
 
             const PointLight& primaryLight = lights.front();
+
             shadowLightSpaceMatrix = computeLightSpaceMatrix(primaryLight);
 
             glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer);
@@ -197,7 +205,7 @@ namespace Application {
 
                 if (std::fabs(ray.direction.z) > Constants::Math::EPSILON)
                 {
-                    float t = -ray.origin.z / ray.direction.z;
+                    float32_t t = -ray.origin.z / ray.direction.z;
 
                     if (t >= 0.f)
                         return ray.origin + ray.direction * t;
@@ -206,8 +214,8 @@ namespace Application {
                 return ray.origin + ray.direction * 300.f;
             }
 
-            float ndcX = (2.f * static_cast<float>(mouseX) / resolution.x) - 1.f;
-            float ndcY = 1.f - (2.f * static_cast<float>(mouseY) / resolution.y);
+            float32_t ndcX = (2.f * static_cast<float32_t>(mouseX) / resolution.x) - 1.f;
+            float32_t ndcY = 1.f - (2.f * static_cast<float32_t>(mouseY) / resolution.y);
 
             return camera.ndcToWorld({ ndcX, ndcY, 0.f });
         }
@@ -223,14 +231,14 @@ namespace Application {
 
         std::optional<std::size_t> pickLight2D(const glm::vec3& worldPoint)
         {
-            float bestDistSq = std::numeric_limits<float>::max();
+            float32_t bestDistSq = std::numeric_limits<float32_t>::max();
             std::optional<std::size_t> bestIndex;
 
             for (std::size_t i = 0; i < lights.size(); ++i)
             {
                 glm::vec3 delta = lights[i].position - worldPoint;
-                float radius = lights[i].radius * 1.8f;
-                float distSq = glm::dot(delta, delta);
+                float32_t radius = lights[i].radius * 1.8f;
+                float32_t distSq = glm::dot(delta, delta);
 
                 if (distSq <= radius * radius && distSq < bestDistSq)
                 {
@@ -244,23 +252,25 @@ namespace Application {
 
         std::optional<std::size_t> pickLight3D(const Ray& ray)
         {
-            float closestT = std::numeric_limits<float>::max();
+            float32_t closestT = std::numeric_limits<float32_t>::max();
             std::optional<std::size_t> bestIndex;
 
             for (std::size_t i = 0; i < lights.size(); ++i)
             {
                 const PointLight& light = lights[i];
+
                 glm::vec3 oc = ray.origin - light.position;
-                float pickRadius = light.radius * 2.1f;
-                float b = glm::dot(oc, ray.direction);
-                float c = glm::dot(oc, oc) - pickRadius * pickRadius;
-                float h = b * b - c;
+
+                float32_t pickRadius = light.radius * 2.1f;
+                float32_t b = glm::dot(oc, ray.direction);
+                float32_t c = glm::dot(oc, oc) - pickRadius * pickRadius;
+                float32_t h = b * b - c;
 
                 if (h < 0.0f)
                     continue;
 
-                float sqrtH = std::sqrt(h);
-                float t = -b - sqrtH;
+                float32_t sqrtH = std::sqrt(h);
+                float32_t t = -b - sqrtH;
 
                 if (t < 0.0f)
                     t = -b + sqrtH;
@@ -283,7 +293,7 @@ namespace Application {
             return pickLight2D(fieldPoint);
         }
 
-        void drawCircleNdc(const glm::vec3& center, const glm::vec2& radius, float r, float g, float b, float a)
+        void drawCircleNdc(const glm::vec3& center, const glm::vec2& radius, float32_t r, float32_t g, float32_t b, float32_t a)
         {
             if (!std::isfinite(center.x) || !std::isfinite(center.y) ||
                 !std::isfinite(radius.x) || !std::isfinite(radius.y) ||
@@ -293,10 +303,11 @@ namespace Application {
             glBegin(GL_TRIANGLE_FAN);
             glVertex2f(center.x, center.y);
 
-            constexpr int segments = 36;
-            for (int i = 0; i <= segments; ++i)
+            constexpr std::int32_t segments = 36;
+            for (std::int32_t i = 0; i <= segments; ++i)
             {
-                float angle = (2.f * Constants::Math::PI * i) / segments;
+                float32_t angle = (2.f * Constants::Math::PI * i) / segments;
+
                 glVertex2f(center.x + std::cos(angle) * radius.x,
                            center.y + std::sin(angle) * radius.y);
             }
@@ -304,25 +315,25 @@ namespace Application {
             glEnd();
         }
 
-        float lineDepthFade(const glm::vec3& a, const glm::vec3& b)
+        float32_t lineDepthFade(const glm::vec3& a, const glm::vec3& b)
         {
             if (cameraMode != CameraMode::ThreeD)
                 return 1.0f;
 
-            float depthA = glm::dot(a - camera3D.getPosition(), camera3D.getForward());
-            float depthB = glm::dot(b - camera3D.getPosition(), camera3D.getForward());
-            float depth = (depthA + depthB) * 0.5f;
-            float farDepth = std::max(world.getDepth() + 900.f, 1.0f);
+            float32_t depthA = glm::dot(a - camera3D.getPosition(), camera3D.getForward());
+            float32_t depthB = glm::dot(b - camera3D.getPosition(), camera3D.getForward());
+            float32_t depth = (depthA + depthB) * 0.5f;
+            float32_t farDepth = std::max(world.getDepth() + 900.f, 1.0f);
 
             return std::clamp(1.0f - depth / farDepth, 0.16f, 0.78f);
         }
 
         void drawProjectedLine(const glm::vec3& a,
                                const glm::vec3& b,
-                               float r,
-                               float g,
-                               float bl,
-                               float alpha,
+                               float32_t r,
+                               float32_t g,
+                               float32_t bl,
+                               float32_t alpha,
                                bool distort = false)
         {
             if (cameraMode == CameraMode::ThreeD &&
@@ -331,20 +342,21 @@ namespace Application {
                 return;
             }
 
-            constexpr int segments = 18;
+            constexpr std::int32_t segments = 18;
+
             glColor4f(r, g, bl, alpha * lineDepthFade(a, b));
             glBegin(GL_LINE_STRIP);
 
-            for (int i = 0; i <= segments; ++i)
+            for (std::int32_t i = 0; i <= segments; ++i)
             {
-                float t = static_cast<float>(i) / static_cast<float>(segments);
+                float32_t t = static_cast<float32_t>(i) / static_cast<float32_t>(segments);
                 glm::vec3 p = a + (b - a) * t;
 
                 if (distort && cameraMode == CameraMode::ThreeD)
                 {
-                    float depth = glm::dot(p - camera3D.getPosition(), camera3D.getForward());
-                    float distanceScale = std::clamp(depth / std::max(world.getDepth(), 1.0f), 0.0f, 1.0f);
-                    float wave = std::sin(t * Constants::Math::PI * 6.0f + depth * 0.018f);
+                    float32_t depth = glm::dot(p - camera3D.getPosition(), camera3D.getForward());
+                    float32_t distanceScale = std::clamp(depth / std::max(world.getDepth(), 1.0f), 0.0f, 1.0f);
+                    float32_t wave = std::sin(t * Constants::Math::PI * 6.0f + depth * 0.018f);
                     p += camera3D.getUp() * (wave * distanceScale * 4.5f);
                 }
 
@@ -361,7 +373,8 @@ namespace Application {
             if (cameraMode != CameraMode::ThreeD || polygon.empty())
                 return polygon;
 
-            constexpr float nearDepth = 2.0f;
+            constexpr float32_t nearDepth = 2.0f;
+
             std::vector<glm::vec3> clipped;
             clipped.reserve(polygon.size() + 2);
 
@@ -374,8 +387,9 @@ namespace Application {
             {
                 const glm::vec3& current = polygon[i];
                 const glm::vec3& next = polygon[(i + 1) % polygon.size()];
-                float currentDepth = depthOf(current);
-                float nextDepth = depthOf(next);
+
+                float32_t currentDepth = depthOf(current);
+                float32_t nextDepth = depthOf(next);
                 bool currentInside = currentDepth > nearDepth;
                 bool nextInside = nextDepth > nearDepth;
 
@@ -385,7 +399,7 @@ namespace Application {
                 }
                 else if (currentInside != nextInside)
                 {
-                    float t = (nearDepth - currentDepth) / (nextDepth - currentDepth);
+                    float32_t t = (nearDepth - currentDepth) / (nextDepth - currentDepth);
                     clipped.push_back(current + (next - current) * t);
 
                     if (nextInside)
@@ -396,7 +410,7 @@ namespace Application {
             return clipped;
         }
 
-        void drawProjectedFace(const std::vector<glm::vec3>& face, float r, float g, float b, float alpha)
+        void drawProjectedFace(const std::vector<glm::vec3>& face, float32_t r, float32_t g, float32_t b, float32_t alpha)
         {
             std::vector<glm::vec3> clipped = clipAgainstCameraNearPlane(face);
             if (clipped.size() < 3)
@@ -421,11 +435,13 @@ namespace Application {
                 return;
 
             particleShader.stop();
+
             glDisable(GL_TEXTURE_2D);
 
             glm::vec3 center = world.getPosition();
             glm::vec2 halfSize = world.getHalfSize();
-            float halfDepth = world.getHalfDepth();
+
+            float32_t halfDepth = world.getHalfDepth();
 
             glm::vec3 min{ center.x - halfSize.x, center.y - halfSize.y, center.z - halfDepth };
             glm::vec3 max{ center.x + halfSize.x, center.y + halfSize.y, center.z + halfDepth };
@@ -445,9 +461,9 @@ namespace Application {
                 return;
             }
 
-            const float x0 = min.x, x1 = max.x;
-            const float y0 = min.y, y1 = max.y;
-            const float z0 = min.z, z1 = max.z;
+            const float32_t x0 = min.x, x1 = max.x;
+            const float32_t y0 = min.y, y1 = max.y;
+            const float32_t z0 = min.z, z1 = max.z;
 
             glm::vec3 c000{ x0, y0, z0 };
             glm::vec3 c100{ x1, y0, z0 };
@@ -478,18 +494,20 @@ namespace Application {
 
             glm::vec3 center = world.getPosition();
             glm::vec2 halfSize = world.getHalfSize();
-            float halfDepth = world.getHalfDepth();
+
+            float32_t halfDepth = world.getHalfDepth();
 
             if (halfDepth <= Constants::Math::EPSILON)
                 return;
 
-            const float floorY = center.y - halfSize.y;
-            const float minX = center.x - halfSize.x;
-            const float maxX = center.x + halfSize.x;
-            const float minZ = center.z - halfDepth;
-            const float maxZ = center.z + halfDepth;
+            const float32_t floorY = center.y - halfSize.y;
+            const float32_t minX = center.x - halfSize.x;
+            const float32_t maxX = center.x + halfSize.x;
+            const float32_t minZ = center.z - halfDepth;
+            const float32_t maxZ = center.z + halfDepth;
 
             particleShader.stop();
+
             glDisable(GL_TEXTURE_2D);
 
             for (const PointLight& light : lights)
@@ -500,7 +518,7 @@ namespace Application {
                 for (const Particle& particle : motion->particles())
                 {
                     glm::vec3 lightToParticle = particle.getPosition() - light.position;
-                    float particleDistance = glm::length(lightToParticle);
+                    float32_t particleDistance = glm::length(lightToParticle);
 
                     if (particleDistance <= Constants::Math::EPSILON || particleDistance > light.range)
                         continue;
@@ -508,7 +526,7 @@ namespace Application {
                     if (lightToParticle.y >= -Constants::Math::EPSILON)
                         continue;
 
-                    float t = (floorY - light.position.y) / lightToParticle.y;
+                    float32_t t = (floorY - light.position.y) / lightToParticle.y;
 
                     if (t <= 1.0f)
                         continue;
@@ -518,10 +536,10 @@ namespace Application {
                     if (hit.x < minX || hit.x > maxX || hit.z < minZ || hit.z > maxZ)
                         continue;
 
-                    float rangeFade = std::clamp(1.0f - particleDistance / std::max(light.range, 1.0f), 0.0f, 1.0f);
-                    float projectionScale = std::clamp(t, 1.0f, 5.5f);
-                    float shadowRadius = std::clamp(particle.getRadius() * projectionScale, 3.0f, 180.0f);
-                    float alpha = std::clamp(light.intensity * rangeFade * rangeFade * 0.30f / std::sqrt(projectionScale),
+                    float32_t rangeFade = std::clamp(1.0f - particleDistance / std::max(light.range, 1.0f), 0.0f, 1.0f);
+                    float32_t projectionScale = std::clamp(t, 1.0f, 5.5f);
+                    float32_t shadowRadius = std::clamp(particle.getRadius() * projectionScale, 3.0f, 180.0f);
+                    float32_t alpha = std::clamp(light.intensity * rangeFade * rangeFade * 0.30f / std::sqrt(projectionScale),
                                              0.0f,
                                              0.34f);
 
@@ -531,12 +549,12 @@ namespace Application {
                     std::vector<glm::vec3> shadow;
                     shadow.reserve(28);
 
-                    constexpr int segments = 28;
-                    for (int i = 0; i < segments; ++i)
+                    constexpr std::int32_t segments = 28;
+                    for (std::int32_t i = 0; i < segments; ++i)
                     {
-                        float angle = (2.0f * Constants::Math::PI * i) / static_cast<float>(segments);
-                        float x = std::clamp(hit.x + std::cos(angle) * shadowRadius, minX, maxX);
-                        float z = std::clamp(hit.z + std::sin(angle) * shadowRadius, minZ, maxZ);
+                        float32_t angle = (2.0f * Constants::Math::PI * i) / static_cast<float32_t>(segments);
+                        float32_t x = std::clamp(hit.x + std::cos(angle) * shadowRadius, minX, maxX);
+                        float32_t z = std::clamp(hit.z + std::sin(angle) * shadowRadius, minZ, maxZ);
                         shadow.push_back({ x, floorY + 0.05f, z });
                     }
 
@@ -640,10 +658,11 @@ namespace Application {
         return true;
     }
 
-    void Update(float dt)
+    void Update(float32_t dt)
     {
-        float frameDt = std::min(dt, Constants::Physics::MAX_FRAME_TIME);
+        float32_t frameDt = std::min(dt, Constants::Physics::MAX_FRAME_TIME);
         double scrollDelta = input.consumeScrollDelta();
+
         windowShakeAcceleration *= std::exp(-Constants::Physics::WINDOW_SHAKE_FORCE_DECAY * frameDt);
 
         if (cameraMode == CameraMode::ThreeD)
@@ -669,7 +688,7 @@ namespace Application {
             input.consumeMouseDelta(dx, dy);
 
             if (input.isMouseButton(GLFW_MOUSE_BUTTON_RIGHT) && !ImGui::GetIO().WantCaptureMouse)
-                camera3D.processMouseDelta(static_cast<float>(dx), static_cast<float>(dy));
+                camera3D.processMouseDelta(static_cast<float32_t>(dx), static_cast<float32_t>(dy));
         } else
         {
             double dx = 0.0, dy = 0.0;
@@ -692,9 +711,11 @@ namespace Application {
 
                 drag.active = false;
                 drag.index.reset();
+
                 selectedLight = lightDrag.index;
                 showLightWindow = true;
                 selectedParticle.reset();
+
                 showParticleWindow = false;
             }
 
@@ -729,6 +750,7 @@ namespace Application {
                     {
                         lightDrag.active = false;
                         lightDrag.index.reset();
+
                         drag.active = true;
                         drag.index = selectedParticle;
                         drag.lastPosition = particle->getPosition();
@@ -736,6 +758,7 @@ namespace Application {
                         drag.depth = std::max(glm::dot(particle->getPosition() - camera3D.getPosition(),
                                               camera3D.getForward()),
                                               1.0f);
+
                         motion->setPinnedParticle(drag.index);
                     }
                 }
@@ -758,9 +781,9 @@ namespace Application {
                 {
                     if (std::abs(scrollDelta) > Constants::Math::EPSILON)
                     {
-                        float maxDepth = world.getDepth() + glm::length(glm::vec2(world.getSize())) + 1200.f;
+                        float32_t maxDepth = world.getDepth() + glm::length(glm::vec2(world.getSize())) + 1200.f;
                         lightDrag.depth = std::clamp(lightDrag.depth -
-                                                         static_cast<float>(scrollDelta) * Constants::Physics::DRAG_SCROLL_DEPTH_STEP,
+                                                         static_cast<float32_t>(scrollDelta) * Constants::Physics::DRAG_SCROLL_DEPTH_STEP,
                                                      Constants::Physics::DRAG_MIN_DEPTH,
                                                      maxDepth);
                     }
@@ -805,9 +828,9 @@ namespace Application {
 
                 if (std::abs(scrollDelta) > Constants::Math::EPSILON)
                 {
-                    float maxDepth = world.getDepth() + glm::length(glm::vec2(world.getSize())) + 1200.f;
+                    float32_t maxDepth = world.getDepth() + glm::length(glm::vec2(world.getSize())) + 1200.f;
                     drag.depth = std::clamp(drag.depth -
-                                                static_cast<float>(scrollDelta) * Constants::Physics::DRAG_SCROLL_DEPTH_STEP,
+                                                static_cast<float32_t>(scrollDelta) * Constants::Physics::DRAG_SCROLL_DEPTH_STEP,
                                             Constants::Physics::DRAG_MIN_DEPTH,
                                             maxDepth);
                 }
@@ -820,12 +843,12 @@ namespace Application {
                 {
                     drag.targetPosition = newPos;
 
-                    float dragDt = std::max(frameDt, Constants::Physics::MIN_DT);
-                    float follow = 1.f - std::exp(-Constants::Physics::DRAG_FOLLOW_STIFFNESS * dragDt);
+                    float32_t dragDt = std::max(frameDt, Constants::Physics::MIN_DT);
+                    float32_t follow = 1.f - std::exp(-Constants::Physics::DRAG_FOLLOW_STIFFNESS * dragDt);
                     glm::vec3 smoothedPos = particle->getPosition() + (drag.targetPosition - particle->getPosition()) * follow;
                     glm::vec3 velocity = (smoothedPos - drag.lastPosition) / dragDt;
 
-                    float speed = glm::length(velocity);
+                    float32_t speed = glm::length(velocity);
                     if (speed > Constants::Physics::MAX_DRAG_SPEED) {
                         velocity = (velocity / speed) * Constants::Physics::MAX_DRAG_SPEED;
                     }
@@ -846,10 +869,10 @@ namespace Application {
                 motion->addTransientAcceleration(windowShakeAcceleration);
             }
 
-            static float accumulator = 0.0f;
+            static float32_t accumulator = 0.0f;
             accumulator += frameDt;
 
-            const float step = Constants::Physics::FIXED_TIME_STEP;
+            const float32_t step = Constants::Physics::FIXED_TIME_STEP;
 
             while (accumulator >= step)
             {
@@ -908,7 +931,7 @@ namespace Application {
 
         if (ImGui::CollapsingHeader("Simulation", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            int mode = (cameraMode == CameraMode::TwoD) ? 0 : 1;
+            std::int32_t mode = (cameraMode == CameraMode::TwoD) ? 0 : 1;
 
             ImGui::RadioButton("Camera 2D", &mode, 0);
             ImGui::SameLine();
@@ -918,7 +941,7 @@ namespace Application {
             updateFieldDepthForCameraMode();
 
             bool lockSimulationConfig = context.isRunning && !context.paused;
-            int simMode = (context.pendingSimulationMode == Simulation::Mode::FreeFall) ? 0 : 1;
+            std::int32_t simMode = (context.pendingSimulationMode == Simulation::Mode::FreeFall) ? 0 : 1;
 
             if (lockSimulationConfig)
                 ImGui::BeginDisabled();
@@ -954,6 +977,7 @@ namespace Application {
 
                 world.setSize(glm::vec2(resolution));
                 updateFieldDepthForCameraMode();
+
                 world.setPosition(glm::vec3(world.getHalfSize(), 0.f));
                 world.setProperties(context.pendingProperties);
 
@@ -962,10 +986,13 @@ namespace Application {
 
                 selectedParticle.reset();
                 selectedLight.reset();
+
                 showParticleWindow = false;
                 showLightWindow = false;
+
                 drag.active = false;
                 drag.index.reset();
+
                 lightDrag.active = false;
                 lightDrag.index.reset();
 
@@ -975,6 +1002,7 @@ namespace Application {
             if (context.isRunning)
             {
                 ImGui::SameLine();
+
                 if (ImGui::Button(context.paused ? "Resume" : "Pause"))
                 {
                     context.paused = !context.paused;
@@ -1063,7 +1091,7 @@ namespace Application {
         glfwSwapBuffers(window);
     }
 
-    void Tick(float dt)
+    void Tick(float32_t dt)
     {
         Update(dt);
         Render();
@@ -1072,9 +1100,12 @@ namespace Application {
     void Cleanup()
     {
         ImGuiLayer::Shutdown();
+
         particleShader.destroy();
         shadowShader.destroy();
+
         destroyShadowMap();
+
         textureManager.clear();
 
         glfwDestroyWindow(window);
@@ -1089,7 +1120,7 @@ namespace Application {
         return camera.worldToNDC(position);
     }
 
-    glm::vec2 ParticleRadiusNDC(const glm::vec3& position, float radius)
+    glm::vec2 ParticleRadiusNDC(const glm::vec3& position, float32_t radius)
     {
         glm::vec3 center = ProjectToNDC(position);
 
@@ -1113,14 +1144,15 @@ namespace Application {
         };
     }
 
-    float DepthCue(const glm::vec3& position)
+    float32_t DepthCue(const glm::vec3& position)
     {
         if (cameraMode != CameraMode::ThreeD)
             return 1.0f;
 
-        float depth = glm::dot(position - camera3D.getPosition(), camera3D.getForward());
-        float nearDepth = std::max(Constants::Physics::DRAG_MIN_DEPTH, 1.0f);
-        float farDepth = std::max(world.getDepth() + 1200.f, nearDepth + 1.0f);
+        float32_t depth = glm::dot(position - camera3D.getPosition(), camera3D.getForward());
+        float32_t nearDepth = std::max(Constants::Physics::DRAG_MIN_DEPTH, 1.0f);
+        float32_t farDepth = std::max(world.getDepth() + 1200.f, nearDepth + 1.0f);
+
         return std::clamp(1.0f - (depth - nearDepth) / farDepth, 0.28f, 1.0f);
     }
 
@@ -1153,7 +1185,7 @@ namespace Application {
         return context.antiAliasing;
     }
 
-    bool IsParticleVisible(const glm::vec3& position, float radius)
+    bool IsParticleVisible(const glm::vec3& position, float32_t radius)
     {
         if (cameraMode == CameraMode::ThreeD)
             return camera3D.isSphereInFront(position, radius);
@@ -1172,7 +1204,7 @@ namespace Application {
                                 cameraMode == CameraMode::ThreeD ? -delta.x * 0.35f : 0.f };
 
         glm::vec3 impulse = acceleration * Constants::Physics::WINDOW_SHAKE_FORCE_SCALE;
-        float impulseLength = glm::length(impulse);
+        float32_t impulseLength = glm::length(impulse);
 
         if (impulseLength > Constants::Physics::WINDOW_SHAKE_MAX_ACCELERATION)
             impulse = (impulse / impulseLength) * Constants::Physics::WINDOW_SHAKE_MAX_ACCELERATION;

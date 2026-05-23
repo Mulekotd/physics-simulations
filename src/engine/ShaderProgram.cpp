@@ -80,7 +80,7 @@ void ShaderProgram::stop() const noexcept
     glUseProgram(0);
 }
 
-void ShaderProgram::setInt(const std::string& name, int value) const noexcept
+void ShaderProgram::setInt(const std::string& name, std::int32_t value) const noexcept
 {
     GLint location = uniformLocation(name);
 
@@ -88,7 +88,7 @@ void ShaderProgram::setInt(const std::string& name, int value) const noexcept
         glUniform1i(location, value);
 }
 
-void ShaderProgram::setFloat(const std::string& name, float value) const noexcept
+void ShaderProgram::setFloat(const std::string& name, float32_t value) const noexcept
 {
     GLint location = uniformLocation(name);
 
@@ -104,7 +104,7 @@ void ShaderProgram::setMat4(const std::string& name, const glm::mat4& value) con
         glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
 }
 
-void ShaderProgram::setVec3(const std::string& name, float x, float y, float z) const noexcept
+void ShaderProgram::setVec3(const std::string& name, float32_t x, float32_t y, float32_t z) const noexcept
 {
     GLint location = uniformLocation(name);
 
@@ -112,7 +112,7 @@ void ShaderProgram::setVec3(const std::string& name, float x, float y, float z) 
         glUniform3f(location, x, y, z);
 }
 
-void ShaderProgram::setVec4(const std::string& name, float x, float y, float z, float w) const noexcept
+void ShaderProgram::setVec4(const std::string& name, float32_t x, float32_t y, float32_t z, float32_t w) const noexcept
 {
     GLint location = uniformLocation(name);
 

@@ -16,19 +16,19 @@ InputManager& InputManager::Instance()
     return s;
 }
 
-bool InputManager::isKeyPressed(int key) const noexcept
+bool InputManager::isKeyPressed(std::int32_t key) const noexcept
 {
-    return key >=0 && key < static_cast<int>(m_keys.size()) && m_keys[key];
+    return key >=0 && key < static_cast<std::int32_t>(m_keys.size()) && m_keys[key];
 }
 
-bool InputManager::isMouseButton(int btn) const noexcept
+bool InputManager::isMouseButton(std::int32_t btn) const noexcept
 {
-    return btn >=0 && btn < static_cast<int>(m_mouse.size()) && m_mouse[btn];
+    return btn >=0 && btn < static_cast<std::int32_t>(m_mouse.size()) && m_mouse[btn];
 }
 
-bool InputManager::wasMousePressed(int btn) noexcept
+bool InputManager::wasMousePressed(std::int32_t btn) noexcept
 {
-    if (btn < 0 || btn >= static_cast<int>(m_mousePressed.size()))
+    if (btn < 0 || btn >= static_cast<std::int32_t>(m_mousePressed.size()))
         return false;
     
     bool pressed = m_mousePressed[btn];
@@ -81,8 +81,8 @@ void InputManager::CursorCallback(GLFWwindow* window, double xpos, double ypos)
 
         const glm::vec2& size = Application::world.getSize();
 
-        float worldDX = static_cast<float>(-dx) * (size.x / static_cast<float>(Application::resolution.x)) * Application::camera.getZoom();
-        float worldDY = static_cast<float>(dy)  * (size.y / static_cast<float>(Application::resolution.y)) * Application::camera.getZoom();
+        float32_t worldDX = static_cast<float32_t>(-dx) * (size.x / static_cast<float32_t>(Application::resolution.x)) * Application::camera.getZoom();
+        float32_t worldDY = static_cast<float32_t>(dy)  * (size.y / static_cast<float32_t>(Application::resolution.y)) * Application::camera.getZoom();
 
         Application::camera.move({ worldDX, worldDY, 0.f });
     }
@@ -91,7 +91,7 @@ void InputManager::CursorCallback(GLFWwindow* window, double xpos, double ypos)
     input.m_mouseY = ypos;
 }
 
-void InputManager::FramebufferSizeCallback(GLFWwindow*, int width, int height)
+void InputManager::FramebufferSizeCallback(GLFWwindow*, std::int32_t width, std::int32_t height)
 {
     glViewport(0, 0, width, height);
 
@@ -103,7 +103,7 @@ void InputManager::FramebufferSizeCallback(GLFWwindow*, int width, int height)
     Application::world.setPosition(glm::vec3(Application::world.getSize() * 0.5f, 0.f));
 }
 
-void InputManager::WindowPosCallback(GLFWwindow*, int xpos, int ypos)
+void InputManager::WindowPosCallback(GLFWwindow*, std::int32_t xpos, std::int32_t ypos)
 {
     if (!input.m_hasWindowPosition)
     {
@@ -113,8 +113,8 @@ void InputManager::WindowPosCallback(GLFWwindow*, int xpos, int ypos)
         return;
     }
 
-    glm::vec2 delta{ static_cast<float>(xpos - input.m_windowX),
-                     static_cast<float>(ypos - input.m_windowY) };
+    glm::vec2 delta{ static_cast<float32_t>(xpos - input.m_windowX),
+                     static_cast<float32_t>(ypos - input.m_windowY) };
 
     input.m_windowX = xpos;
     input.m_windowY = ypos;
@@ -126,21 +126,21 @@ void InputManager::WindowPosCallback(GLFWwindow*, int xpos, int ypos)
     }
 }
 
-void InputManager::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void InputManager::KeyCallback(GLFWwindow* window, std::int32_t key, std::int32_t scancode, std::int32_t action, std::int32_t mods)
 {
     ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
 
-    if (key >= 0 && key < static_cast<int>(input.m_keys.size()))
+    if (key >= 0 && key < static_cast<std::int32_t>(input.m_keys.size()))
         input.m_keys[key] = (action != GLFW_RELEASE);
 }
 
-void InputManager::MouseCallback(GLFWwindow* window, int button, int action, int mods)
+void InputManager::MouseCallback(GLFWwindow* window, std::int32_t button, std::int32_t action, std::int32_t mods)
 {
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 
     const bool capturedByImGui = ImGui::GetIO().WantCaptureMouse;
 
-    if (button >= 0 && button < static_cast<int>(input.m_mouse.size()))
+    if (button >= 0 && button < static_cast<std::int32_t>(input.m_mouse.size()))
         input.m_mouse[button] = (action != GLFW_RELEASE);
 
     if (button == GLFW_MOUSE_BUTTON_RIGHT && !capturedByImGui)
@@ -158,7 +158,7 @@ void InputManager::MouseCallback(GLFWwindow* window, int button, int action, int
     if (!capturedByImGui &&
         action == GLFW_PRESS &&
         button >= 0 &&
-        button < static_cast<int>(input.m_mousePressed.size()))
+        button < static_cast<std::int32_t>(input.m_mousePressed.size()))
     {
         input.m_mousePressed[button] = true;
     }
@@ -166,7 +166,7 @@ void InputManager::MouseCallback(GLFWwindow* window, int button, int action, int
 
 void InputManager::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    constexpr float factor = 1.1f;
+    constexpr float32_t factor = 1.1f;
 
     ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
 

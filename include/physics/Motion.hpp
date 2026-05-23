@@ -15,7 +15,7 @@
 #include "physics/ForceFunctions.hpp"
 
 namespace Simulation {
-    using ForceFunc = std::function<void(Particle&, float)>;
+    using ForceFunc = std::function<void(Particle&, float32_t)>;
 
     enum class Mode {
         FreeFall,
@@ -31,7 +31,7 @@ namespace Simulation {
         [[nodiscard]] bool isOrbitCenter(std::size_t index) const noexcept { return m_mode == Mode::Orbit && index == 0; }
 
         void render();
-        void update(float dt);
+        void update(float32_t dt);
         void addTransientAcceleration(const glm::vec3& acceleration) noexcept { m_transientAcceleration += acceleration; }
 
         std::optional<std::size_t> pickParticle(const glm::vec3& origin, const glm::vec3& direction) const;

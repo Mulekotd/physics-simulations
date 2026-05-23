@@ -10,7 +10,7 @@ int main()
     while (!glfwWindowShouldClose(Application::window))
     {
         double currentTime = glfwGetTime();
-        float deltaTime = static_cast<float>(currentTime - lastTime);
+        float32_t deltaTime = static_cast<float32_t>(currentTime - lastTime);
 
         lastTime = currentTime;
 

@@ -10,7 +10,7 @@
 
 #include "physics/Particle.hpp"
 
-Particle::Particle(const glm::vec3& position, const glm::vec3& velocity, float mass, float radius, float angularVelocity)
+Particle::Particle(const glm::vec3& position, const glm::vec3& velocity, float32_t mass, float32_t radius, float32_t angularVelocity)
     : m_id(m_nextId++),
       m_force(0.f),
       m_position(position), 
@@ -72,10 +72,10 @@ void Particle::draw() const
     Application::particleShader.setFloat("u_shadowMapSize", 1024.0f);
     Application::particleShader.setInt("u_shadowEnabled", Application::shadowMapReady ? 1 : 0);
 
-    int lightCount = std::min(static_cast<int>(Application::lights.size()), Constants::Lighting::MAX_LIGHTS);
+    std::int32_t lightCount = std::min(static_cast<std::int32_t>(Application::lights.size()), Constants::Lighting::MAX_LIGHTS);
     Application::particleShader.setInt("u_lightCount", lightCount);
 
-    for (int i = 0; i < lightCount; ++i)
+    for (std::int32_t i = 0; i < lightCount; ++i)
     {
         const auto& light = Application::lights[static_cast<std::size_t>(i)];
         std::string index = std::to_string(i);
@@ -99,18 +99,18 @@ void Particle::draw() const
     glVertex2f(ndc.x, ndc.y);
 
     // Circumference
-    int segments = std::clamp(static_cast<int>(m_radius * 10), 24, 128);
-    float step = 2.0f * Constants::Math::PI / segments;
+    std::int32_t segments = std::clamp(static_cast<std::int32_t>(m_radius * 10), 24, 128);
+    float32_t step = 2.0f * Constants::Math::PI / segments;
 
-    for (int i = 0; i <= segments; ++i)
+    for (std::int32_t i = 0; i <= segments; ++i)
     {
-        float angle = i * step;
-        float dx = std::cos(angle) * ndcRadius.x;
-        float dy = std::sin(angle) * ndcRadius.y;
+        float32_t angle = i * step;
+        float32_t dx = std::cos(angle) * ndcRadius.x;
+        float32_t dy = std::sin(angle) * ndcRadius.y;
 
-        float textureAngle = angle + rotationAngle();
-        float u = 0.5f + std::cos(textureAngle) * 0.5f;
-        float v = 0.5f + std::sin(textureAngle) * 0.5f;
+        float32_t textureAngle = angle + rotationAngle();
+        float32_t u = 0.5f + std::cos(textureAngle) * 0.5f;
+        float32_t v = 0.5f + std::sin(textureAngle) * 0.5f;
 
         glTexCoord2f(u, v);
         glVertex2f(ndc.x + dx, ndc.y + dy);
@@ -127,7 +127,7 @@ void Particle::draw() const
     glDisable(GL_TEXTURE_2D);
 }
 
-void Particle::integrate(float dt) noexcept
+void Particle::integrate(float32_t dt) noexcept
 {
     // resulting acceleration (F = m·a → a = F/m)
     const glm::vec3 a = m_force * (1.0f / m_mass);
@@ -143,7 +143,7 @@ void Particle::integrate(float dt) noexcept
     clearForces();
 }
 
-void Particle::integrateSymplectic(float dt) noexcept
+void Particle::integrateSymplectic(float32_t dt) noexcept
 {
     const glm::vec3 a = m_force * (1.0f / m_mass);
 
@@ -154,7 +154,7 @@ void Particle::integrateSymplectic(float dt) noexcept
     clearForces();
 }
 
-void Particle::integrateRotation(float dt) noexcept
+void Particle::integrateRotation(float32_t dt) noexcept
 {
     if (std::abs(m_angularVelocity) <= Constants::Math::EPSILON)
         return;
@@ -163,10 +163,10 @@ void Particle::integrateRotation(float dt) noexcept
     m_rotation = glm::normalize(delta * m_rotation);
 }
 
-float Particle::rotationAngle() const noexcept
+float32_t Particle::rotationAngle() const noexcept
 {
     glm::vec3 rotatedX = m_rotation * glm::vec3{ 1.f, 0.f, 0.f };
-    float angle = std::atan2(rotatedX.y, rotatedX.x);
+    float32_t angle = std::atan2(rotatedX.y, rotatedX.x);
 
     if (angle < 0.0f)
         angle += 2.0f * Constants::Math::PI;
@@ -174,7 +174,7 @@ float Particle::rotationAngle() const noexcept
     return angle;
 }
 
-void Particle::setMass(float m) noexcept
+void Particle::setMass(float32_t m) noexcept
 {
     m_mass = std::max(m, Constants::Physics::MIN_MASS);
 }

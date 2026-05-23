@@ -30,12 +30,12 @@ namespace Application {
         bool active = false;
         glm::vec3 lastPosition{ 0.f, 0.f, 0.f };
         glm::vec3 targetPosition{ 0.f, 0.f, 0.f };
-        float depth = 0.f;
+        float32_t depth = 0.f;
         std::optional<std::size_t> index;
     };
 
     struct RuntimeState {
-        int count = 250;
+        std::int32_t count = 250;
         bool isRunning = false;
         bool paused = false;
         bool antiAliasing = true;
@@ -50,15 +50,15 @@ namespace Application {
 
     struct PointLight {
         glm::vec3 position{ 0.f, 0.f, 0.f };
-        float radius = 12.f;
-        float range = 420.f;
-        float intensity = 0.45f;
+        float32_t radius = 12.f;
+        float32_t range = 420.f;
+        float32_t intensity = 0.45f;
         std::uint32_t id = 0;
     };
 
     struct LightDragState {
         bool active = false;
-        float depth = 0.f;
+        float32_t depth = 0.f;
         std::optional<std::size_t> index;
     };
 
@@ -78,8 +78,8 @@ namespace Application {
     inline ShaderProgram shadowShader;
     inline TextureManager textureManager;
     inline TextureId globalParticleTexture = 0;
-    inline int globalTextureIndex = 0;
-    inline int selectedTextureIndex = 0;
+    inline std::int32_t globalTextureIndex = 0;
+    inline std::int32_t selectedTextureIndex = 0;
 
     inline std::unique_ptr<Simulation::Motion> motion = nullptr;
     inline std::optional<std::size_t> selectedParticle;
@@ -97,16 +97,16 @@ namespace Application {
     inline bool shadowMapReady = false;
 
     bool Init();
-    void Update(float dt);
+    void Update(float32_t dt);
     void Render();
-    void Tick(float dt);
+    void Tick(float32_t dt);
     void Cleanup();
 
     glm::vec3 ProjectToNDC(const glm::vec3& position);
-    glm::vec2 ParticleRadiusNDC(const glm::vec3& position, float radius);
-    float DepthCue(const glm::vec3& position);
+    glm::vec2 ParticleRadiusNDC(const glm::vec3& position, float32_t radius);
+    float32_t DepthCue(const glm::vec3& position);
     glm::vec3 ParticleLightDirection(const glm::vec3& position);
     bool IsAntiAliasingEnabled();
-    bool IsParticleVisible(const glm::vec3& position, float radius);
+    bool IsParticleVisible(const glm::vec3& position, float32_t radius);
     void AddWindowShake(glm::vec2 delta);
 }

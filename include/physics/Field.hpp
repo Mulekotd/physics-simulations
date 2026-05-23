@@ -10,9 +10,9 @@ class Particle;
 class Field {
 public:
     struct Properties {
-        float gravity;
-        float friction;
-        float restitution;
+        float32_t gravity;
+        float32_t friction;
+        float32_t restitution;
     };
 
     explicit Field(glm::vec2 size,
@@ -24,20 +24,20 @@ public:
 
     [[nodiscard]] const glm::vec2& getSize() const noexcept { return m_size; }
     [[nodiscard]] const glm::vec2& getHalfSize() const noexcept { return m_halfSize; }
-    [[nodiscard]] float getDepth() const noexcept { return m_depth; }
-    [[nodiscard]] float getHalfDepth() const noexcept { return m_halfDepth; }
+    [[nodiscard]] float32_t getDepth() const noexcept { return m_depth; }
+    [[nodiscard]] float32_t getHalfDepth() const noexcept { return m_halfDepth; }
     [[nodiscard]] glm::vec3 getPosition() const noexcept { return m_position; }
-    [[nodiscard]] float getGravityConstant() const noexcept { return m_props.gravity; }
-    [[nodiscard]] float getFrictionConstant() const noexcept { return m_props.friction; }
-    [[nodiscard]] float getRestitutionConstant() const noexcept { return m_props.restitution; }
+    [[nodiscard]] float32_t getGravityConstant() const noexcept { return m_props.gravity; }
+    [[nodiscard]] float32_t getFrictionConstant() const noexcept { return m_props.friction; }
+    [[nodiscard]] float32_t getRestitutionConstant() const noexcept { return m_props.restitution; }
     [[nodiscard]] Properties getProperties() const noexcept { return m_props; }
 
     void setSize(glm::vec2 s) noexcept;
-    void setDepth(float depth) noexcept;
+    void setDepth(float32_t depth) noexcept;
     void setPosition(glm::vec3 p) noexcept { m_position = p; }
-    void setGravityConstant(float g) noexcept { m_props.gravity = g; }
-    void setFrictionConstant(float f) noexcept { m_props.friction = f; }
-    void setRestitutionConstant(float r) noexcept { m_props.restitution = r; }
+    void setGravityConstant(float32_t g) noexcept { m_props.gravity = g; }
+    void setFrictionConstant(float32_t f) noexcept { m_props.friction = f; }
+    void setRestitutionConstant(float32_t r) noexcept { m_props.restitution = r; }
     void setProperties(Properties props) noexcept { m_props = props; }
 
     bool contains(const glm::vec3& position) const noexcept;
@@ -50,8 +50,8 @@ public:
 private:
     glm::vec2  m_size;
     glm::vec2  m_halfSize;
-    float      m_depth;
-    float      m_halfDepth;
+    float32_t      m_depth;
+    float32_t      m_halfDepth;
     glm::vec3  m_position;
     Properties m_props;
 };

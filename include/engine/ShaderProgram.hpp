@@ -6,6 +6,8 @@
 #include <GL/gl.h>
 #include <glm/mat4x4.hpp>
 
+#include "app/Types.hpp"
+
 class ShaderProgram {
 public:
     ShaderProgram() = default;
@@ -22,11 +24,11 @@ public:
 
     GLuint id() const noexcept { return m_program; }
 
-    void setInt(const std::string& name, int value) const noexcept;
-    void setFloat(const std::string& name, float value) const noexcept;
+    void setInt(const std::string& name, std::int32_t value) const noexcept;
+    void setFloat(const std::string& name, float32_t value) const noexcept;
     void setMat4(const std::string& name, const glm::mat4& value) const noexcept;
-    void setVec3(const std::string& name, float x, float y, float z) const noexcept;
-    void setVec4(const std::string& name, float x, float y, float z, float w) const noexcept;
+    void setVec3(const std::string& name, float32_t x, float32_t y, float32_t z) const noexcept;
+    void setVec4(const std::string& name, float32_t x, float32_t y, float32_t z, float32_t w) const noexcept;
 
 private:
     GLuint m_program = 0;

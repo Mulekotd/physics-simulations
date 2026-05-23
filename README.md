@@ -81,11 +81,18 @@ sudo apt install build-essential cmake libglfw3-dev libgl1-mesa-dev
 
 ### 3. Build the Project
 
+Debug build:
+
 ```bash
-mkdir -p build
-cd build
-cmake ..
-make
+cmake -S . -B build/debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/debug --parallel
+```
+
+Release build:
+
+```bash
+cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release --parallel
 ```
 
 ### 4. Run the Simulation

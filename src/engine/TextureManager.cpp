@@ -22,15 +22,15 @@ TextureId TextureManager::createSolid(const std::string& name, std::uint8_t r, s
 TextureId TextureManager::createChecker(const std::string& name,
                                         std::uint8_t r1, std::uint8_t g1, std::uint8_t b1, std::uint8_t a1,
                                         std::uint8_t r2, std::uint8_t g2, std::uint8_t b2, std::uint8_t a2,
-                                        int size)
+                                        std::int32_t size)
 {
     if (size <= 0) size = 8;
 
     std::vector<std::uint8_t> data(static_cast<std::size_t>(size * size * 4), 0);
 
-    for (int y = 0; y < size; ++y)
+    for (std::int32_t y = 0; y < size; ++y)
     {
-        for (int x = 0; x < size; ++x)
+        for (std::int32_t x = 0; x < size; ++x)
         {
             bool even = ((x / (size / 2)) + (y / (size / 2))) % 2 == 0;
 
@@ -51,9 +51,9 @@ TextureId TextureManager::createChecker(const std::string& name,
     return createTexture(name, size, size, data);
 }
 
-TextureId TextureManager::getByIndex(int index) const noexcept
+TextureId TextureManager::getByIndex(std::int32_t index) const noexcept
 {
-    if (index < 0 || index >= static_cast<int>(m_entries.size()))
+    if (index < 0 || index >= static_cast<std::int32_t>(m_entries.size()))
         return 0;
 
     return m_entries[static_cast<std::size_t>(index)].id;
@@ -67,7 +67,7 @@ void TextureManager::clear() {
     m_entries.clear();
 }
 
-TextureId TextureManager::createTexture(const std::string& name, int width, int height, const std::vector<std::uint8_t> &data)
+TextureId TextureManager::createTexture(const std::string& name, std::int32_t width, std::int32_t height, const std::vector<std::uint8_t> &data)
 {
     TextureId id = 0;
 

@@ -18,7 +18,7 @@ void Field::setSize(glm::vec2 s) noexcept
         m_halfSize = s * 0.5f;
 }
 
-void Field::setDepth(float depth) noexcept
+void Field::setDepth(float32_t depth) noexcept
 {
     m_depth = std::max(depth, 0.0f);
     m_halfDepth = m_depth * 0.5f;
@@ -36,8 +36,8 @@ bool Field::contains(const glm::vec3& position) const noexcept
 {
     glm::vec3 relative = getRelativePosition(position);
 
-    float halfW = m_halfSize.x;
-    float halfH = m_halfSize.y;
+    float32_t halfW = m_halfSize.x;
+    float32_t halfH = m_halfSize.y;
 
     bool insideXY = (-halfW <= relative.x && relative.x <= halfW) &&
                     (-halfH <= relative.y && relative.y <= halfH);
