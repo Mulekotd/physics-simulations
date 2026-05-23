@@ -108,31 +108,47 @@ physics-simulation/
 ├── CMakeLists.txt
 ├── LICENSE
 ├── README.md
+├── imgui.ini
+├── include
+│   ├── app
+│   │   ├── Application.hpp
+│   │   ├── Constants.hpp
+│   │   └── Types.hpp
+│   ├── engine
+│   │   ├── Camera2D.hpp
+│   │   ├── Camera3D.hpp
+│   │   ├── Ray.hpp
+│   │   ├── ShaderProgram.hpp
+│   │   └── TextureManager.hpp
+│   ├── physics
+│   │   ├── Field.hpp
+│   │   ├── ForceFunctions.hpp
+│   │   ├── Motion.hpp
+│   │   └── Particle.hpp
+│   └── ui
+│       ├── ImGuiLayer.hpp
+│       └── InputManager.hpp
 ├── main.cpp
-│
-├── include/
-│   ├── physics/
-│   │   ├── Types.hpp
-│   ├── physics/
-│   │   ├── Particle.hpp
-│   │   ├── Field.hpp
-│   │   ├── Motion.hpp
-│   │   └── ForceFunctions.hpp
-│   ├── engine/
-│   │   └── Camera2D.hpp
-│   ├── app/
-│   │   ├── Application.hpp
-│   │   ├── Context.hpp
-│   │   └── Constants.hpp
-│   └── ui/
-│       ├── ImGuiLayer.hpp
-│       └── InputManager.hpp
-│
-└── src/
-    ├── physics/
-    ├── engine/
-    ├── app/
-    └── ui/
+├── shaders
+│   ├── particle.frag
+│   ├── particle.vert
+│   ├── shadow_depth.frag
+│   └── shadow_depth.vert
+└── src
+    ├── app
+    │   └── Application.cpp
+    ├── engine
+    │   ├── Camera2D.cpp
+    │   ├── Camera3D.cpp
+    │   ├── ShaderProgram.cpp
+    │   └── TextureManager.cpp
+    ├── physics
+    │   ├── Field.cpp
+    │   ├── Motion.cpp
+    │   └── Particle.cpp
+    └── ui
+        ├── ImGuiLayer.cpp
+        └── InputManager.cpp
 ```
 
 ## 🤝 Feedback and Contributions

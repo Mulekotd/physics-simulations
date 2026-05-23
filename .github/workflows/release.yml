@@ -2,9 +2,8 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
-      - master
+    tags:
+      - release-v*.*.*
   workflow_dispatch:
 
 permissions:
@@ -12,7 +11,7 @@ permissions:
 
 jobs:
   release:
-    name: Build and release from commits
+    name: Build tagged release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,67 +20,33 @@ jobs:
           fetch-depth: 0
           submodules: recursive
 
-      - name: Resolve next version
-        id: version
+      - name: Validate release tag
+        id: release
         shell: bash
         run: |
-          if git describe --exact-match --tags HEAD >/dev/null 2>&1; then
+          tag_name="${GITHUB_REF_NAME}"
+
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then
             echo "release_created=false" >> "$GITHUB_OUTPUT"
-            echo "HEAD already has a tag; skipping release."
+            echo "This workflow only builds tagged releases."
             exit 0
           fi
 
-          latest_tag="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
-
-          if [ -n "$latest_tag" ]; then
-            range="${latest_tag}..HEAD"
-            version="${latest_tag#v}"
-          else
-            range="HEAD"
-            version="0.0.0"
-          fi
-
-          if [ -z "$(git log --format=%H "$range")" ]; then
+          if [[ ! "$tag_name" =~ ^release-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "release_created=false" >> "$GITHUB_OUTPUT"
-            echo "No commits to release."
+            echo "Tag '$tag_name' does not match release-vX.Y.Z."
             exit 0
           fi
 
-          messages="$(git log --format=%B "$range")"
+          version="${tag_name#release-}"
+          release_title="release ${version}"
+          previous_tag="$(git tag --list 'release-v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | grep -Fvx "$tag_name" | head -n 1)"
 
-          if grep -Eq '(^|[[:space:]])BREAKING CHANGE:' <<< "$messages" ||
-             grep -Eq '^[a-zA-Z]+(\([^)]+\))?!:' <<< "$messages"; then
-            bump="major"
-          elif grep -Eiq '^feat(\([^)]+\))?:' <<< "$messages"; then
-            bump="minor"
+          if [ -n "$previous_tag" ]; then
+            range="${previous_tag}..${tag_name}"
           else
-            bump="patch"
+            range="${tag_name}"
           fi
-
-          IFS='.' read -r major minor patch <<< "$version"
-
-          if [ "$version" = "0.0.0" ]; then
-            if [ "$bump" = "major" ]; then
-              major=1
-              minor=0
-              patch=0
-            else
-              major=0
-              minor=1
-              patch=0
-            fi
-          elif [ "$bump" = "major" ]; then
-            major=$((major + 1))
-            minor=0
-            patch=0
-          elif [ "$bump" = "minor" ]; then
-            minor=$((minor + 1))
-            patch=0
-          else
-            patch=$((patch + 1))
-          fi
-
-          tag_name="v${major}.${minor}.${patch}"
 
           {
             echo "## Changes"
@@ -92,10 +57,11 @@ jobs:
 
           echo "release_created=true" >> "$GITHUB_OUTPUT"
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
-          echo "Next release: $tag_name"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release_title=$release_title" >> "$GITHUB_OUTPUT"
 
       - name: Install system dependencies
-        if: ${{ steps.version.outputs.release_created == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -107,32 +73,28 @@ jobs:
             xorg-dev
 
       - name: Configure
-        if: ${{ steps.version.outputs.release_created == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        if: ${{ steps.version.outputs.release_created == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         run: cmake --build build --config Release --parallel
 
       - name: Package artifact
-        if: ${{ steps.version.outputs.release_created == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         run: |
-          mkdir -p dist/physics-simulations-${{ steps.version.outputs.tag_name }}
-          cp build/physics-simulations dist/physics-simulations-${{ steps.version.outputs.tag_name }}/
-          cp -R shaders dist/physics-simulations-${{ steps.version.outputs.tag_name }}/
-          cp README.md LICENSE dist/physics-simulations-${{ steps.version.outputs.tag_name }}/
-          tar -C dist -czf dist/physics-simulations-${{ steps.version.outputs.tag_name }}-linux-x86_64.tar.gz physics-simulations-${{ steps.version.outputs.tag_name }}
+          mkdir -p dist/physics-simulations-${{ steps.release.outputs.version }}
+          cp build/physics-simulations dist/physics-simulations-${{ steps.release.outputs.version }}/
+          cp -R shaders dist/physics-simulations-${{ steps.release.outputs.version }}/
+          cp README.md LICENSE dist/physics-simulations-${{ steps.release.outputs.version }}/
+          tar -C dist -czf dist/physics-simulations-${{ steps.release.outputs.version }}-linux-x86_64.tar.gz physics-simulations-${{ steps.release.outputs.version }}
 
       - name: Create GitHub release
-        if: ${{ steps.version.outputs.release_created == 'true' }}
+        if: ${{ steps.release.outputs.release_created == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.version.outputs.tag_name }}"
-          git push origin "${{ steps.version.outputs.tag_name }}"
-          gh release create "${{ steps.version.outputs.tag_name }}" \
+          gh release create "${{ steps.release.outputs.tag_name }}" \
             dist/*.tar.gz \
-            --title "${{ steps.version.outputs.tag_name }}" \
+            --title "${{ steps.release.outputs.release_title }}" \
             --notes-file release_notes.md
