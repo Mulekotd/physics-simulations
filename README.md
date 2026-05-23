@@ -1,8 +1,8 @@
-# Physics Simulation
+# Physics Simulations
 
 ## 📌 Overview
 
-A C++ physics simulation project using modern OpenGL (GLFW) for real-time visualization of particles and fields. The system is modular, supporting extensible simulation laws (Newton's Laws), and integrates Dear ImGui for interactive UI controls.
+A C++ physics simulations project using modern OpenGL (GLFW) for real-time visualization of particles and fields. The system is modular, supporting extensible simulation laws (Newton's Laws), and integrates Dear ImGui for interactive UI controls.
 
 ## 🛠️ Selected Technologies
 
@@ -131,4 +131,4 @@ physics-simulation/
 ## 🤝 Feedback and Contributions
 
 Feedback, suggestions, and contributions are welcome!  
-If you have ideas for improvements or encounter any issues, please [open an issue](https://github.com/Mulekotd/physics-simulation/issues) on GitHub.
+If you have ideas for improvements or encounter any issues, please [open an issue](https://github.com/Mulekotd/physics-simulations/issues) on GitHub.
