@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
@@ -9,7 +11,7 @@
 #include "physics/Particle.hpp"
 
 namespace Simulation::Forces {
-    // weight force
+    // Uniform near-surface gravitational field: F = m * g.
     inline auto gravity(const Field& world)
     {
         return [&world](Particle& particle, float)
@@ -22,7 +24,7 @@ namespace Simulation::Forces {
     // dynamic friction
     inline auto friction(const Field& world)
     {
-        return [&world](Particle& particle, float)
+        return [&world](Particle& particle, float dt)
         {
             float g  = world.getGravityConstant();
             float mu = world.getFrictionConstant();
@@ -34,7 +36,9 @@ namespace Simulation::Forces {
             if (speed > 0.0001f)
             {
                 glm::vec3 direction = -glm::normalize(velocity);
-                glm::vec3 force = direction * mu * particle.getMass() * g;
+                float kineticFriction = mu * particle.getMass() * g;
+                float maxStoppingForce = particle.getMass() * speed / std::max(dt, Constants::Physics::MIN_DT);
+                glm::vec3 force = direction * std::min(kineticFriction, maxStoppingForce);
 
                 particle.addForce(force);
             }

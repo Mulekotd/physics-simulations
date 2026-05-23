@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/mat4x4.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
@@ -44,6 +45,7 @@ private:
     glm::vec3 m_forward{ 0.f, 0.f, -1.f };
     glm::vec3 m_right{ 1.f, 0.f, 0.f };
     glm::vec3 m_up{ 0.f, 1.f, 0.f };
+    glm::quat m_orientation{ 1.f, 0.f, 0.f, 0.f };
 
     float m_yaw;
     float m_pitch;

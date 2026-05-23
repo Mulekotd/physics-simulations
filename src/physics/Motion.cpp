@@ -279,26 +279,45 @@ void Motion::applyOrbitalForces()
     if (m_particles.size() < 2)
         return;
 
-    for (std::size_t attractorIndex = 0; attractorIndex < m_particles.size(); ++attractorIndex)
+    const Particle& center = m_particles.front();
+    const float softeningSq = Constants::Physics::ORBIT_SOFTENING * Constants::Physics::ORBIT_SOFTENING;
+
+    // The orbit center is pinned intentionally, so it acts as an external
+    // gravitational field for satellites instead of a conserved free body.
+    for (std::size_t i = 1; i < m_particles.size(); ++i)
     {
-        const Particle& attractor = m_particles[attractorIndex];
-        if (attractorIndex != 0 &&
-            attractor.getMass() < m_particles.front().getMass() * Constants::Physics::ORBIT_SECONDARY_GRAVITY_MASS_RATIO)
-        {
+        if (m_pinnedParticle.has_value() && *m_pinnedParticle == i)
             continue;
-        }
 
-        for (std::size_t i = 1; i < m_particles.size(); ++i)
+        Particle& particle = m_particles[i];
+        glm::vec3 delta = center.getPosition() - particle.getPosition();
+        float softenedDistanceSq = glm::dot(delta, delta) + softeningSq;
+        float softenedDistance = std::sqrt(softenedDistanceSq);
+
+        if (softenedDistance <= Constants::Math::EPSILON)
+            continue;
+
+        float forceScale = Constants::Physics::ORBIT_GRAVITATIONAL_CONSTANT *
+                           center.getMass() * particle.getMass() /
+                           (softenedDistanceSq * softenedDistance);
+
+        particle.addForce(delta * forceScale);
+    }
+
+    const float secondaryMassThreshold =
+        center.getMass() * Constants::Physics::ORBIT_SECONDARY_GRAVITY_MASS_RATIO;
+
+    for (std::size_t i = 1; i < m_particles.size(); ++i)
+    {
+        for (std::size_t j = i + 1; j < m_particles.size(); ++j)
         {
-            if (i == attractorIndex)
+            Particle& a = m_particles[i];
+            Particle& b = m_particles[j];
+
+            if (std::max(a.getMass(), b.getMass()) < secondaryMassThreshold)
                 continue;
 
-            if (m_pinnedParticle.has_value() && *m_pinnedParticle == i)
-                continue;
-
-            Particle& particle = m_particles[i];
-            glm::vec3 delta = attractor.getPosition() - particle.getPosition();
-            float softeningSq = Constants::Physics::ORBIT_SOFTENING * Constants::Physics::ORBIT_SOFTENING;
+            glm::vec3 delta = b.getPosition() - a.getPosition();
             float softenedDistanceSq = glm::dot(delta, delta) + softeningSq;
             float softenedDistance = std::sqrt(softenedDistanceSq);
 
@@ -306,10 +325,15 @@ void Motion::applyOrbitalForces()
                 continue;
 
             float forceScale = Constants::Physics::ORBIT_GRAVITATIONAL_CONSTANT *
-                               attractor.getMass() * particle.getMass() /
+                               a.getMass() * b.getMass() /
                                (softenedDistanceSq * softenedDistance);
+            glm::vec3 force = delta * forceScale;
 
-            particle.addForce(delta * forceScale);
+            if (!m_pinnedParticle.has_value() || *m_pinnedParticle != i)
+                a.addForce(force);
+
+            if (!m_pinnedParticle.has_value() || *m_pinnedParticle != j)
+                b.addForce(-force);
         }
     }
 }

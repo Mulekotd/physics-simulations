@@ -1,6 +1,7 @@
 #include <cstdio>
 
 #include <GL/gl.h>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "engine/ShaderProgram.hpp"
 
@@ -16,6 +17,8 @@ void ShaderProgram::destroy() noexcept
         glDeleteProgram(m_program);
         m_program = 0;
     }
+
+    m_uniformLocations.clear();
 }
 
 bool ShaderProgram::init(const std::string& vertexSource, const std::string& fragmentSource)
@@ -38,8 +41,10 @@ bool ShaderProgram::init(const std::string& vertexSource, const std::string& fra
     GLint linked = GL_FALSE;
     glGetProgramiv(program, GL_LINK_STATUS, &linked);
 
-    if (!linked) {
+    if (!linked)
+    {
         GLint length = 0;
+
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
 
         if (length > 1)
@@ -61,6 +66,7 @@ bool ShaderProgram::init(const std::string& vertexSource, const std::string& fra
     glDeleteShader(fs);
 
     m_program = program;
+    m_uniformLocations.clear();
     return true;
 }
 
@@ -76,7 +82,7 @@ void ShaderProgram::stop() const noexcept
 
 void ShaderProgram::setInt(const std::string& name, int value) const noexcept
 {
-    GLint location = glGetUniformLocation(m_program, name.c_str());
+    GLint location = uniformLocation(name);
 
     if (location >= 0)
         glUniform1i(location, value);
@@ -84,15 +90,23 @@ void ShaderProgram::setInt(const std::string& name, int value) const noexcept
 
 void ShaderProgram::setFloat(const std::string& name, float value) const noexcept
 {
-    GLint location = glGetUniformLocation(m_program, name.c_str());
+    GLint location = uniformLocation(name);
 
     if (location >= 0)
         glUniform1f(location, value);
 }
 
+void ShaderProgram::setMat4(const std::string& name, const glm::mat4& value) const noexcept
+{
+    GLint location = uniformLocation(name);
+
+    if (location >= 0)
+        glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
+}
+
 void ShaderProgram::setVec3(const std::string& name, float x, float y, float z) const noexcept
 {
-    GLint location = glGetUniformLocation(m_program, name.c_str());
+    GLint location = uniformLocation(name);
 
     if (location >= 0)
         glUniform3f(location, x, y, z);
@@ -100,10 +114,30 @@ void ShaderProgram::setVec3(const std::string& name, float x, float y, float z) 
 
 void ShaderProgram::setVec4(const std::string& name, float x, float y, float z, float w) const noexcept
 {
-    GLint location = glGetUniformLocation(m_program, name.c_str());
+    GLint location = uniformLocation(name);
 
     if (location >= 0)
         glUniform4f(location, x, y, z, w);
+}
+
+GLint ShaderProgram::uniformLocation(const std::string& name) const noexcept
+{
+    auto it = m_uniformLocations.find(name);
+
+    if (it != m_uniformLocations.end())
+        return it->second;
+
+    GLint location = glGetUniformLocation(m_program, name.c_str());
+
+    try
+    {
+        m_uniformLocations.emplace(name, location);
+    }
+    catch (...)
+    {
+    }
+
+    return location;
 }
 
 GLuint ShaderProgram::compileShader(GLenum type, const std::string& source)
@@ -122,7 +156,8 @@ GLuint ShaderProgram::compileShader(GLenum type, const std::string& source)
         GLint length = 0;
         glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
 
-        if (length > 1) {
+        if (length > 1)
+        {
             std::string log(static_cast<std::size_t>(length), '\0');
             glGetShaderInfoLog(shader, length, nullptr, log.data());
             std::fprintf(stderr, "Shader compile error: %s\n", log.c_str());

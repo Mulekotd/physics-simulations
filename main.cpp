@@ -1,11 +1,14 @@
 #include "app/Application.hpp"
 
-int main() {
-    if (!Application::Init()) return -1;
+int main()
+{
+    if (!Application::Init())
+        return -1;
 
     double lastTime = glfwGetTime();
 
-    while (!glfwWindowShouldClose(Application::window)) {
+    while (!glfwWindowShouldClose(Application::window))
+    {
         double currentTime = glfwGetTime();
         float deltaTime = static_cast<float>(currentTime - lastTime);
 

@@ -65,9 +65,9 @@ namespace Constants {
     namespace Lighting {
         inline constexpr int MAX_LIGHTS = 8;
         inline constexpr float DEFAULT_RADIUS = 12.0f;
-        inline constexpr float DEFAULT_RANGE = 420.0f;
+        inline constexpr float DEFAULT_RANGE = 900.0f;
+        inline constexpr float MIN_RANGE = 80.0f;
+        inline constexpr float MAX_RANGE = 3600.0f;
         inline constexpr float DEFAULT_INTENSITY = 0.28f;
-        inline constexpr float SHADOW_LENGTH = 0.28f;
-        inline constexpr float DEPTH_SHADOW_SCALE = 0.006f;
     }
 }

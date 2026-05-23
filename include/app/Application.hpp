@@ -1,10 +1,12 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <vector>
 
 #include <GLFW/glfw3.h>
+#include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/trigonometric.hpp>
@@ -51,6 +53,7 @@ namespace Application {
         float radius = 12.f;
         float range = 420.f;
         float intensity = 0.45f;
+        std::uint32_t id = 0;
     };
 
     struct LightDragState {
@@ -72,6 +75,7 @@ namespace Application {
     inline CameraMode cameraMode = CameraMode::TwoD;
 
     inline ShaderProgram particleShader;
+    inline ShaderProgram shadowShader;
     inline TextureManager textureManager;
     inline TextureId globalParticleTexture = 0;
     inline int globalTextureIndex = 0;
@@ -79,11 +83,18 @@ namespace Application {
 
     inline std::unique_ptr<Simulation::Motion> motion = nullptr;
     inline std::optional<std::size_t> selectedParticle;
+    inline std::optional<std::size_t> selectedLight;
     inline bool showParticleWindow = false;
+    inline bool showLightWindow = false;
     inline DragState drag;
     inline std::vector<PointLight> lights;
     inline LightDragState lightDrag;
+    inline std::uint32_t nextLightId = 1;
     inline glm::vec3 windowShakeAcceleration{ 0.f, 0.f, 0.f };
+    inline GLuint shadowFramebuffer = 0;
+    inline GLuint shadowDepthTexture = 0;
+    inline glm::mat4 shadowLightSpaceMatrix{ 1.f };
+    inline bool shadowMapReady = false;
 
     bool Init();
     void Update(float dt);

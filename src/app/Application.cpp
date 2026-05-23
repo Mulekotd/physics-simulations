@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <glm/geometric.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "imgui.h"
 #include "backends/imgui_impl_glfw.h"
@@ -20,6 +21,8 @@
 
 namespace Application {
     namespace {
+        constexpr int SHADOW_MAP_SIZE = 1024;
+
         std::string readTextFile(const std::string& path)
         {
             std::ifstream file(path);
@@ -40,6 +43,150 @@ namespace Application {
                 return contents;
 
             return readTextFile("../" + path);
+        }
+
+        void initShadowMap()
+        {
+            if (shadowFramebuffer != 0 && shadowDepthTexture != 0)
+                return;
+
+            glGenFramebuffers(1, &shadowFramebuffer);
+            glGenTextures(1, &shadowDepthTexture);
+
+            glBindTexture(GL_TEXTURE_2D, shadowDepthTexture);
+            glTexImage2D(GL_TEXTURE_2D,
+                         0,
+                         GL_DEPTH_COMPONENT,
+                         SHADOW_MAP_SIZE,
+                         SHADOW_MAP_SIZE,
+                         0,
+                         GL_DEPTH_COMPONENT,
+                         GL_FLOAT,
+                         nullptr);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowDepthTexture, 0);
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDrawBuffer(GL_BACK);
+            glReadBuffer(GL_BACK);
+        }
+
+        void destroyShadowMap()
+        {
+            if (shadowDepthTexture != 0)
+            {
+                glDeleteTextures(1, &shadowDepthTexture);
+                shadowDepthTexture = 0;
+            }
+
+            if (shadowFramebuffer != 0)
+            {
+                glDeleteFramebuffers(1, &shadowFramebuffer);
+                shadowFramebuffer = 0;
+            }
+
+            shadowMapReady = false;
+        }
+
+        glm::mat4 computeLightSpaceMatrix(const PointLight& light)
+        {
+            glm::vec3 center = world.getPosition();
+            glm::vec2 halfSize = world.getHalfSize();
+            float halfDepth = std::max(world.getHalfDepth(), 1.0f);
+            float sceneRadius = glm::length(glm::vec3{ halfSize.x, halfSize.y, halfDepth });
+
+            glm::vec3 lightDir = center - light.position;
+            if (glm::dot(lightDir, lightDir) <= Constants::Math::EPSILON)
+                lightDir = glm::vec3{ -0.35f, -0.75f, -0.55f };
+            lightDir = glm::normalize(lightDir);
+
+            glm::vec3 up{ 0.f, 1.f, 0.f };
+            if (std::abs(glm::dot(up, lightDir)) > 0.92f)
+                up = glm::vec3{ 0.f, 0.f, 1.f };
+
+            float lightDistance = std::max(glm::length(light.position - center), sceneRadius);
+            glm::mat4 lightView = glm::lookAt(light.position, light.position + lightDir, up);
+            glm::mat4 lightProjection = glm::ortho(-sceneRadius,
+                                                   sceneRadius,
+                                                   -sceneRadius,
+                                                   sceneRadius,
+                                                   0.1f,
+                                                   lightDistance + sceneRadius * 2.0f);
+            return lightProjection * lightView;
+        }
+
+        void drawParticleShadowDepth(const Particle& particle, const PointLight& light)
+        {
+            glm::vec3 lightDir = particle.getPosition() - light.position;
+            float distanceSq = glm::dot(lightDir, lightDir);
+
+            if (distanceSq <= Constants::Math::EPSILON || distanceSq > light.range * light.range)
+                return;
+
+            lightDir = glm::normalize(lightDir);
+            glm::vec3 up{ 0.f, 1.f, 0.f };
+            if (std::abs(glm::dot(up, lightDir)) > 0.92f)
+                up = glm::vec3{ 0.f, 0.f, 1.f };
+
+            glm::vec3 right = glm::normalize(glm::cross(up, lightDir));
+            glm::vec3 discUp = glm::normalize(glm::cross(lightDir, right));
+            glm::vec3 nearestCenter = particle.getPosition() - lightDir * particle.getRadius();
+
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex3f(nearestCenter.x, nearestCenter.y, nearestCenter.z);
+
+            constexpr int segments = 32;
+            for (int i = 0; i <= segments; ++i)
+            {
+                float angle = (2.0f * Constants::Math::PI * i) / static_cast<float>(segments);
+                glm::vec3 point = nearestCenter +
+                                  right * (std::cos(angle) * particle.getRadius()) +
+                                  discUp * (std::sin(angle) * particle.getRadius());
+                glVertex3f(point.x, point.y, point.z);
+            }
+
+            glEnd();
+        }
+
+        void renderShadowMap()
+        {
+            shadowMapReady = false;
+
+            if (!motion || lights.empty() || shadowFramebuffer == 0 || shadowDepthTexture == 0)
+                return;
+
+            const PointLight& primaryLight = lights.front();
+            shadowLightSpaceMatrix = computeLightSpaceMatrix(primaryLight);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer);
+            glViewport(0, 0, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(GL_TRUE);
+
+            shadowShader.use();
+            shadowShader.setMat4("u_lightSpaceMatrix", shadowLightSpaceMatrix);
+
+            for (const Particle& particle : motion->particles())
+                drawParticleShadowDepth(particle, primaryLight);
+
+            shadowShader.stop();
+
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDrawBuffer(GL_BACK);
+            glReadBuffer(GL_BACK);
+            glViewport(0, 0, resolution.x, resolution.y);
+            glDisable(GL_DEPTH_TEST);
+
+            shadowMapReady = true;
         }
 
         glm::vec3 mouseToFieldPoint(double mouseX, double mouseY)
@@ -65,7 +212,16 @@ namespace Application {
             return camera.ndcToWorld({ ndcX, ndcY, 0.f });
         }
 
-        std::optional<std::size_t> pickLight(const glm::vec3& worldPoint)
+        PointLight makePointLight(const glm::vec3& position)
+        {
+            return { position,
+                     Constants::Lighting::DEFAULT_RADIUS,
+                     Constants::Lighting::DEFAULT_RANGE,
+                     Constants::Lighting::DEFAULT_INTENSITY,
+                     nextLightId++ };
+        }
+
+        std::optional<std::size_t> pickLight2D(const glm::vec3& worldPoint)
         {
             float bestDistSq = std::numeric_limits<float>::max();
             std::optional<std::size_t> bestIndex;
@@ -84,6 +240,47 @@ namespace Application {
             }
 
             return bestIndex;
+        }
+
+        std::optional<std::size_t> pickLight3D(const Ray& ray)
+        {
+            float closestT = std::numeric_limits<float>::max();
+            std::optional<std::size_t> bestIndex;
+
+            for (std::size_t i = 0; i < lights.size(); ++i)
+            {
+                const PointLight& light = lights[i];
+                glm::vec3 oc = ray.origin - light.position;
+                float pickRadius = light.radius * 2.1f;
+                float b = glm::dot(oc, ray.direction);
+                float c = glm::dot(oc, oc) - pickRadius * pickRadius;
+                float h = b * b - c;
+
+                if (h < 0.0f)
+                    continue;
+
+                float sqrtH = std::sqrt(h);
+                float t = -b - sqrtH;
+
+                if (t < 0.0f)
+                    t = -b + sqrtH;
+
+                if (t >= 0.0f && t < closestT)
+                {
+                    closestT = t;
+                    bestIndex = i;
+                }
+            }
+
+            return bestIndex;
+        }
+
+        std::optional<std::size_t> pickLightAt(double mouseX, double mouseY, const glm::vec3& fieldPoint)
+        {
+            if (cameraMode == CameraMode::ThreeD)
+                return pickLight3D(camera3D.screenPointToRay(mouseX, mouseY, glm::vec2(resolution)));
+
+            return pickLight2D(fieldPoint);
         }
 
         void drawCircleNdc(const glm::vec3& center, const glm::vec2& radius, float r, float g, float b, float a)
@@ -269,60 +466,7 @@ namespace Application {
             drawProjectedFace({ c100, c101, c111, c110 }, 0.18f, 0.38f, 0.62f, 0.09f);
         }
 
-        struct ShadowFace {
-            glm::vec3 origin;
-            glm::vec3 u;
-            glm::vec3 v;
-            glm::vec3 normal;
-            float uLength;
-            float vLength;
-        };
-
-        void drawParticleShadowOnFace(const Particle& particle, const PointLight& light, const ShadowFace& face)
-        {
-            glm::vec3 lightToParticle = particle.getPosition() - light.position;
-            float particleDistance = glm::length(lightToParticle);
-
-            if (particleDistance <= Constants::Math::EPSILON || particleDistance > light.range)
-                return;
-
-            float denom = glm::dot(lightToParticle, face.normal);
-            if (std::abs(denom) <= Constants::Math::EPSILON)
-                return;
-
-            float t = glm::dot(face.origin - light.position, face.normal) / denom;
-            if (t <= 1.0f)
-                return;
-
-            glm::vec3 hit = light.position + lightToParticle * t;
-            glm::vec3 local = hit - face.origin;
-            float uCenter = glm::dot(local, face.u);
-            float vCenter = glm::dot(local, face.v);
-
-            if (uCenter < 0.0f || uCenter > face.uLength || vCenter < 0.0f || vCenter > face.vLength)
-                return;
-
-            float fade = std::clamp(1.0f - particleDistance / light.range, 0.0f, 1.0f);
-            float projectionScale = std::clamp(t, 1.0f, 3.6f);
-            float shadowRadius = std::clamp(particle.getRadius() * projectionScale, 4.0f, 95.0f);
-            float alpha = light.intensity * fade * fade * (0.28f / std::sqrt(projectionScale));
-
-            std::vector<glm::vec3> shadow;
-            shadow.reserve(28);
-
-            constexpr int segments = 28;
-            for (int i = 0; i < segments; ++i)
-            {
-                float angle = (2.0f * Constants::Math::PI * i) / static_cast<float>(segments);
-                float u = std::clamp(uCenter + std::cos(angle) * shadowRadius, 0.0f, face.uLength);
-                float v = std::clamp(vCenter + std::sin(angle) * shadowRadius, 0.0f, face.vLength);
-                shadow.push_back(face.origin + face.u * u + face.v * v);
-            }
-
-            drawProjectedFace(shadow, 0.0f, 0.0f, 0.0f, alpha);
-        }
-
-        void drawFreeFallParticleShadows()
+        void drawFreeFallFloorShadows()
         {
             if (cameraMode != CameraMode::ThreeD ||
                 context.simulationMode != Simulation::Mode::FreeFall ||
@@ -339,29 +483,68 @@ namespace Application {
             if (halfDepth <= Constants::Math::EPSILON)
                 return;
 
-            glm::vec3 min{ center.x - halfSize.x, center.y - halfSize.y, center.z - halfDepth };
-            glm::vec3 max{ center.x + halfSize.x, center.y + halfSize.y, center.z + halfDepth };
-            float width = max.x - min.x;
-            float height = max.y - min.y;
-            float depth = max.z - min.z;
+            const float floorY = center.y - halfSize.y;
+            const float minX = center.x - halfSize.x;
+            const float maxX = center.x + halfSize.x;
+            const float minZ = center.z - halfDepth;
+            const float maxZ = center.z + halfDepth;
 
-            const ShadowFace faces[] = {
-                { { min.x, min.y, min.z }, { 1.f, 0.f, 0.f }, { 0.f, 0.f, 1.f }, { 0.f, 1.f, 0.f }, width, depth },
-                { { min.x, max.y, min.z }, { 1.f, 0.f, 0.f }, { 0.f, 0.f, 1.f }, { 0.f, -1.f, 0.f }, width, depth },
-                { { min.x, min.y, min.z }, { 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.f }, { 0.f, 0.f, 1.f }, width, height },
-                { { min.x, min.y, max.z }, { 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.f }, { 0.f, 0.f, -1.f }, width, height },
-                { { min.x, min.y, min.z }, { 0.f, 0.f, 1.f }, { 0.f, 1.f, 0.f }, { 1.f, 0.f, 0.f }, depth, height },
-                { { max.x, min.y, min.z }, { 0.f, 0.f, 1.f }, { 0.f, 1.f, 0.f }, { -1.f, 0.f, 0.f }, depth, height }
-            };
+            particleShader.stop();
+            glDisable(GL_TEXTURE_2D);
 
-            for (const auto& light : lights)
+            for (const PointLight& light : lights)
             {
+                if (light.position.y <= floorY + Constants::Math::EPSILON)
+                    continue;
+
                 for (const Particle& particle : motion->particles())
                 {
-                    for (const ShadowFace& face : faces)
-                        drawParticleShadowOnFace(particle, light, face);
+                    glm::vec3 lightToParticle = particle.getPosition() - light.position;
+                    float particleDistance = glm::length(lightToParticle);
+
+                    if (particleDistance <= Constants::Math::EPSILON || particleDistance > light.range)
+                        continue;
+
+                    if (lightToParticle.y >= -Constants::Math::EPSILON)
+                        continue;
+
+                    float t = (floorY - light.position.y) / lightToParticle.y;
+
+                    if (t <= 1.0f)
+                        continue;
+
+                    glm::vec3 hit = light.position + lightToParticle * t;
+
+                    if (hit.x < minX || hit.x > maxX || hit.z < minZ || hit.z > maxZ)
+                        continue;
+
+                    float rangeFade = std::clamp(1.0f - particleDistance / std::max(light.range, 1.0f), 0.0f, 1.0f);
+                    float projectionScale = std::clamp(t, 1.0f, 5.5f);
+                    float shadowRadius = std::clamp(particle.getRadius() * projectionScale, 3.0f, 180.0f);
+                    float alpha = std::clamp(light.intensity * rangeFade * rangeFade * 0.30f / std::sqrt(projectionScale),
+                                             0.0f,
+                                             0.34f);
+
+                    if (alpha <= 0.002f)
+                        continue;
+
+                    std::vector<glm::vec3> shadow;
+                    shadow.reserve(28);
+
+                    constexpr int segments = 28;
+                    for (int i = 0; i < segments; ++i)
+                    {
+                        float angle = (2.0f * Constants::Math::PI * i) / static_cast<float>(segments);
+                        float x = std::clamp(hit.x + std::cos(angle) * shadowRadius, minX, maxX);
+                        float z = std::clamp(hit.z + std::sin(angle) * shadowRadius, minZ, maxZ);
+                        shadow.push_back({ x, floorY + 0.05f, z });
+                    }
+
+                    drawProjectedFace(shadow, 0.0f, 0.0f, 0.0f, alpha);
                 }
             }
+
+            glColor4f(1.f, 1.f, 1.f, 1.f);
         }
 
         void drawLighting()
@@ -371,8 +554,6 @@ namespace Application {
 
             particleShader.stop();
             glDisable(GL_TEXTURE_2D);
-
-            drawFreeFallParticleShadows();
 
             for (const auto& light : lights)
             {
@@ -435,6 +616,8 @@ namespace Application {
 
         std::string vertexShader = readProjectTextFile("shaders/particle.vert");
         std::string fragmentShader = readProjectTextFile("shaders/particle.frag");
+        std::string shadowVertexShader = readProjectTextFile("shaders/shadow_depth.vert");
+        std::string shadowFragmentShader = readProjectTextFile("shaders/shadow_depth.frag");
 
         if (vertexShader.empty() || fragmentShader.empty() ||
             !particleShader.init(vertexShader, fragmentShader))
@@ -442,6 +625,15 @@ namespace Application {
             std::fprintf(stderr, "Failed to initialize particle shader.\n");
             return false;
         }
+
+        if (shadowVertexShader.empty() || shadowFragmentShader.empty() ||
+            !shadowShader.init(shadowVertexShader, shadowFragmentShader))
+        {
+            std::fprintf(stderr, "Failed to initialize shadow shader.\n");
+            return false;
+        }
+
+        initShadowMap();
 
         globalParticleTexture = textureManager.createSolid("White", 255, 255, 255, 255);
 
@@ -484,14 +676,27 @@ namespace Application {
             input.consumeMouseDelta(dx, dy);
         }
 
-        if (motion && input.wasMousePressed(GLFW_MOUSE_BUTTON_LEFT) && !ImGui::GetIO().WantCaptureMouse)
+        if (input.wasMousePressed(GLFW_MOUSE_BUTTON_LEFT) && !ImGui::GetIO().WantCaptureMouse)
         {
             double mouseX = 0.0, mouseY = 0.0;
             input.cursorPos(mouseX, mouseY);
             glm::vec3 fieldPoint = mouseToFieldPoint(mouseX, mouseY);
 
-            lightDrag.index = pickLight(fieldPoint);
+            lightDrag.index = pickLightAt(mouseX, mouseY, fieldPoint);
             lightDrag.active = lightDrag.index.has_value();
+
+            if (lightDrag.active)
+            {
+                if (drag.active && motion)
+                    motion->setPinnedParticle(std::nullopt);
+
+                drag.active = false;
+                drag.index.reset();
+                selectedLight = lightDrag.index;
+                showLightWindow = true;
+                selectedParticle.reset();
+                showParticleWindow = false;
+            }
 
             if (lightDrag.active && cameraMode == CameraMode::ThreeD && lightDrag.index.has_value())
             {
@@ -501,18 +706,20 @@ namespace Application {
                                            Constants::Physics::DRAG_MIN_DEPTH);
             }
 
-            if (!lightDrag.active && cameraMode == CameraMode::ThreeD)
+            if (!lightDrag.active && motion && cameraMode == CameraMode::ThreeD)
             {
                 Ray ray = camera3D.screenPointToRay(mouseX, mouseY, glm::vec2(resolution));
                 selectedParticle = motion->pickParticle(ray.origin, ray.direction);
-            } else if (!lightDrag.active)
+            } else if (!lightDrag.active && motion)
             {
                 selectedParticle = motion->pickParticle2D(fieldPoint);
             }
 
-            if (!context.paused && !lightDrag.active && selectedParticle.has_value())
+            if (motion && !context.paused && !lightDrag.active && selectedParticle.has_value())
             {
                 showParticleWindow = true;
+                selectedLight.reset();
+                showLightWindow = false;
 
                 if (cameraMode == CameraMode::ThreeD)
                 {
@@ -520,6 +727,8 @@ namespace Application {
 
                     if (particle)
                     {
+                        lightDrag.active = false;
+                        lightDrag.index.reset();
                         drag.active = true;
                         drag.index = selectedParticle;
                         drag.lastPosition = particle->getPosition();
@@ -563,6 +772,11 @@ namespace Application {
                 {
                     lights[*lightDrag.index].position = mouseToFieldPoint(mouseX, mouseY);
                 }
+            }
+            else
+            {
+                lightDrag.active = false;
+                lightDrag.index.reset();
             }
         }
 
@@ -646,6 +860,8 @@ namespace Application {
     }
 
     void Render() {
+        renderShadowMap();
+
         glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -655,6 +871,7 @@ namespace Application {
             glDisable(GL_MULTISAMPLE);
 
         drawFreeFallBounds();
+        drawFreeFallFloorShadows();
         drawLighting();
         if (motion) motion->render();
 
@@ -716,10 +933,7 @@ namespace Application {
 
             if (ImGui::Button("Add Light") && lights.size() < Constants::Lighting::MAX_LIGHTS)
             {
-                lights.push_back({ world.getPosition(),
-                                   Constants::Lighting::DEFAULT_RADIUS,
-                                   Constants::Lighting::DEFAULT_RANGE,
-                                   Constants::Lighting::DEFAULT_INTENSITY });
+                lights.push_back(makePointLight(world.getPosition()));
             }
 
             ImGui::SameLine();
@@ -728,6 +942,8 @@ namespace Application {
                 lights.clear();
                 lightDrag.active = false;
                 lightDrag.index.reset();
+                selectedLight.reset();
+                showLightWindow = false;
             }
 
             if (ImGui::Button(context.isRunning ? "Restart" : "Start"))
@@ -745,7 +961,9 @@ namespace Application {
                 camera3D = Camera3D{ glm::vec3{ world.getHalfSize(), Constants::Camera::DEFAULT_3D_START_DISTANCE } };
 
                 selectedParticle.reset();
+                selectedLight.reset();
                 showParticleWindow = false;
+                showLightWindow = false;
                 drag.active = false;
                 drag.index.reset();
                 lightDrag.active = false;
@@ -810,6 +1028,36 @@ namespace Application {
             }
         }
 
+        if (showLightWindow && selectedLight.has_value())
+        {
+            if (*selectedLight >= lights.size())
+            {
+                showLightWindow = false;
+                selectedLight.reset();
+            }
+            else
+            {
+                PointLight& light = lights[*selectedLight];
+
+                if (ImGui::Begin("Light", &showLightWindow))
+                {
+                    ImGui::Text("Id: %u", light.id);
+                    ImGui::Text("Position: (%.2f, %.2f, %.2f)", light.position.x, light.position.y, light.position.z);
+                    ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 2.0f, "%.2f");
+                    ImGui::SliderFloat("Range",
+                                       &light.range,
+                                       Constants::Lighting::MIN_RANGE,
+                                       Constants::Lighting::MAX_RANGE,
+                                       "%.0f");
+                }
+
+                ImGui::End();
+
+                if (!showLightWindow)
+                    selectedLight.reset();
+            }
+        }
+
         ImGuiLayer::EndFrame();
 
         glfwSwapBuffers(window);
@@ -825,6 +1073,8 @@ namespace Application {
     {
         ImGuiLayer::Shutdown();
         particleShader.destroy();
+        shadowShader.destroy();
+        destroyShadowMap();
         textureManager.clear();
 
         glfwDestroyWindow(window);

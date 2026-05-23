@@ -28,9 +28,12 @@ bool InputManager::isMouseButton(int btn) const noexcept
 
 bool InputManager::wasMousePressed(int btn) noexcept
 {
-    if (btn < 0 || btn >= static_cast<int>(m_mousePressed.size())) return false;
+    if (btn < 0 || btn >= static_cast<int>(m_mousePressed.size()))
+        return false;
+    
     bool pressed = m_mousePressed[btn];
     m_mousePressed[btn] = false;
+
     return pressed;
 }
 
@@ -47,6 +50,7 @@ double InputManager::consumeScrollDelta() noexcept
 {
     double delta = m_scrollDeltaY;
     m_scrollDeltaY = 0.0;
+
     return delta;
 }
 
@@ -78,7 +82,7 @@ void InputManager::CursorCallback(GLFWwindow* window, double xpos, double ypos)
         const glm::vec2& size = Application::world.getSize();
 
         float worldDX = static_cast<float>(-dx) * (size.x / static_cast<float>(Application::resolution.x)) * Application::camera.getZoom();
-        float worldDY = static_cast<float>( dy) * (size.y / static_cast<float>(Application::resolution.y)) * Application::camera.getZoom();
+        float worldDY = static_cast<float>(dy)  * (size.y / static_cast<float>(Application::resolution.y)) * Application::camera.getZoom();
 
         Application::camera.move({ worldDX, worldDY, 0.f });
     }
@@ -134,22 +138,30 @@ void InputManager::MouseCallback(GLFWwindow* window, int button, int action, int
 {
     ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 
-    if (ImGui::GetIO().WantCaptureMouse)
-        return;
+    const bool capturedByImGui = ImGui::GetIO().WantCaptureMouse;
 
-    if (button == GLFW_MOUSE_BUTTON_RIGHT)
+    if (button >= 0 && button < static_cast<int>(input.m_mouse.size()))
+        input.m_mouse[button] = (action != GLFW_RELEASE);
+
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && !capturedByImGui)
     {
         input.m_panning = (action == GLFW_PRESS);
 
         if (input.m_panning) 
             glfwGetCursorPos(window, &input.m_prevX, &input.m_prevY);
     }
+    else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
+    {
+        input.m_panning = false;
+    }
 
-    if (button >= 0 && button < static_cast<int>(input.m_mouse.size()))
-        input.m_mouse[button] = (action != GLFW_RELEASE);
-
-    if (action == GLFW_PRESS && button >= 0 && button < static_cast<int>(input.m_mousePressed.size()))
+    if (!capturedByImGui &&
+        action == GLFW_PRESS &&
+        button >= 0 &&
+        button < static_cast<int>(input.m_mousePressed.size()))
+    {
         input.m_mousePressed[button] = true;
+    }
 }
 
 void InputManager::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)

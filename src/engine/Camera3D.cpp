@@ -3,13 +3,15 @@
 
 #include <glm/geometric.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "engine/Camera3D.hpp"
 
 Camera3D::Camera3D(glm::vec3 position, float yaw, float pitch)
     : m_position(position),
       m_yaw(yaw),
-      m_pitch(pitch) {
+      m_pitch(pitch)
+{
     updateVectors();
 }
 
@@ -79,16 +81,15 @@ Ray Camera3D::screenPointToRay(double x, double y, const glm::vec2& viewport) co
 
 void Camera3D::updateVectors() noexcept
 {
-    float yawRad = glm::radians(m_yaw);
+    const glm::vec3 worldUp{ 0.f, 1.f, 0.f };
+    float yawRad = glm::radians(m_yaw + 90.f);
     float pitchRad = glm::radians(m_pitch);
 
-    glm::vec3 forward{
-        std::cos(yawRad) * std::cos(pitchRad),
-        std::sin(pitchRad),
-        std::sin(yawRad) * std::cos(pitchRad)
-    };
+    glm::quat yawRotation = glm::angleAxis(yawRad, worldUp);
+    glm::quat pitchRotation = glm::angleAxis(pitchRad, glm::vec3{ 1.f, 0.f, 0.f });
+    m_orientation = glm::normalize(yawRotation * pitchRotation);
 
-    m_forward = glm::normalize(forward);
-    m_right = glm::normalize(glm::cross(m_forward, glm::vec3{ 0.f, 1.f, 0.f }));
+    m_forward = glm::normalize(m_orientation * glm::vec3{ 0.f, 0.f, -1.f });
+    m_right = glm::normalize(m_orientation * glm::vec3{ 1.f, 0.f, 0.f });
     m_up = glm::normalize(glm::cross(m_right, m_forward));
 }
